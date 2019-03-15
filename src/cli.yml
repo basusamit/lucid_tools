@@ -1,0 +1,14 @@
+name: lucid_tools
+version: "0.1"
+author: Samit B. <samit.basu@smiths.com>
+about: Manipulate LUCID HDL from AlchitryLabs.com
+args:
+  - INPUT:
+      help: Sets the input file to use
+      required: true
+      index: 1
+  - OUTPUT:
+      help: Sets the output file to use
+      required: true
+      index: 2
+
