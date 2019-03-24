@@ -270,7 +270,7 @@ impl Lexer {
     }
 
     pub fn match_integer(&mut self) -> LexerResult {
-        Ok(Token::from_kind_and_range(TokenKind::NUMBER, self.build_integer()))
+        Ok(Token::from_kind_and_range(TokenKind::NUMBERINT, self.build_integer()))
     }
 
     fn skip_type_specifier(&mut self, spec: char) {
@@ -307,7 +307,7 @@ impl Lexer {
         self.skip_type_specifier('h');
         self.skip_number_body(16);
         let range = TextRange::from(result_position, self.ptr);
-        Ok(Token::from_kind_and_range(TokenKind::NUMBER, range))
+        Ok(Token::from_kind_and_range(TokenKind::NUMBERHEX, range))
     }
 
     fn match_binary(&mut self) -> LexerResult {
@@ -316,7 +316,7 @@ impl Lexer {
         self.skip_type_specifier('b');
         self.skip_number_body(2);
         let range = TextRange::from(result_position, self.ptr);
-        Ok(Token::from_kind_and_range(TokenKind::NUMBER, range))
+        Ok(Token::from_kind_and_range(TokenKind::NUMBERBIN, range))
     }
 
     fn match_decimal(&mut self) -> LexerResult {
@@ -325,13 +325,13 @@ impl Lexer {
         self.skip_type_specifier('d');
         self.skip_number_body(10);
         let range = TextRange::from(result_position, self.ptr);
-        Ok(Token::from_kind_and_range(TokenKind::NUMBER, range))
+        Ok(Token::from_kind_and_range(TokenKind::NUMBERDEC, range))
     }
 
     pub fn match_number(&mut self) -> LexerResult {
         if let Some(chr) = self.chr {
             if chr.eq(&'0') {
-                return self.match_integer();
+                return self.match_decimal();
             }
             // We see a digit - this could be
             // a size prefix. To determine if it is, we have
@@ -408,7 +408,7 @@ impl Lexer {
             self.push_ptr();
         }
         let range = TextRange::from(result_position, self.ptr);
-        Ok(Token::from_kind_and_range(TokenKind::NUMBER, range))
+        Ok(Token::from_kind_and_range(TokenKind::NUMBER_STRING, range))
     }
 
     pub fn fetch(&mut self) -> LexerResult {
@@ -447,9 +447,9 @@ impl Lexer {
                 }
                 return Ok(Token::from_kind_and_range(TokenKind::IDENTIFIER, self.build_identifier()));
             }
-            if chr.is_digit(10) {
-                return Ok(Token::from_kind_and_range(TokenKind::NUMBER, self.build_integer()));
-            }
+//            if chr.is_digit(10) {
+//                 return Ok(Token::from_kind_and_range(TokenKind::NUMBER, self.build_integer()));
+//            }
             return self.match_single_operator(chr);
         }
         Ok(Token::eof())

@@ -222,11 +222,18 @@ impl Parser {
             }));
         }
         match token.kind {
-            TokenKind::NUMBER =>
+            TokenKind::NUMBERINT =>
                 Ok(Box::from(Expression::NumberExpression(
-                    Number::DecimalNumber {
-                        value: self.lexer.consume()?
-                    }))),
+                    Number::IntegerNumber(self.lexer.consume()?)))),
+            TokenKind::NUMBERHEX =>
+                Ok(Box::from(Expression::NumberExpression(
+                    Number::HexNumber(self.lexer.consume()?)))),
+            TokenKind::NUMBERBIN =>
+                Ok(Box::from(Expression::NumberExpression(
+                    Number::BinaryNumber(self.lexer.consume()?)))),
+            TokenKind::NUMBERDEC =>
+                Ok(Box::from(Expression::NumberExpression(
+                    Number::DecimalNumber(self.lexer.consume()?)))),
             TokenKind::IDENTIFIER => self.signal_expression(),
             TokenKind::LPAREN => self.group_expression(),
             TokenKind::LBRACE => self.array_expression(),
@@ -234,7 +241,7 @@ impl Parser {
             TokenKind::FUNCTION => self.function_expression(),
             _ => {
                 let mut msg = String::new();
-                let _ = write!(msg,"Unexpected token in expression: {:?}", token);
+                let _ = write!(msg, "Unexpected token in expression: {:?}", token);
                 Err(ProgramError::of("Invalid expression", &msg))
             }
         }
@@ -567,7 +574,8 @@ impl Parser {
                         skip_kind = false;
                         break;
                     },
-                    TokenKind::NUMBER => {
+                    TokenKind::NUMBER_STRING | TokenKind::NUMBERBIN | TokenKind::NUMBERHEX
+                    | TokenKind::NUMBERDEC | TokenKind::NUMBERINT => {
                         ret.push(CaseElement{kind: kind.clone(), statements});
                         skip_kind = false;
                         break;

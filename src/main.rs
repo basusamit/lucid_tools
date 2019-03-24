@@ -26,6 +26,8 @@ use crate::compiler::pretty_write_file::PrettyWriteContext;
 #[macro_use]
 extern crate clap;
 use clap::App;
+use crate::compiler::semantic_analysis::{SemanticAnalysisContext, SymbolTable};
+use crate::compiler::constant_expressions::ConstantExpressionContext;
 
 /// First, parse the command line to get the arguments
 fn main() {
@@ -42,6 +44,17 @@ fn main() {
     let source = parser.source().unwrap();
     let output_file = File::create(matches.value_of("OUTPUT").unwrap()).expect("Cannot create output file");
 
-    let mut ctxt = PrettyWriteContext::from(&contents,&output_file);
+    let mut ctxt = PrettyWriteContext::from(&contents, &output_file);
     ctxt.source(&source);
+
+    let mut symbol = SymbolTable::new();
+    {
+        let mut semantic_analysis = SemanticAnalysisContext::from(&contents, &mut symbol);
+        semantic_analysis.source(&source).unwrap();
+    }
+    {
+        let mut const_analysis = ConstantExpressionContext::from(&contents, &mut symbol);
+        const_analysis.source(&source).unwrap();
+    }
+    println!("{:?}", symbol);
 }

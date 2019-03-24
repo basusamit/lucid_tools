@@ -90,9 +90,11 @@ impl<'a> PrettyWriteContext<'a> {
 
     fn number(& mut self, number: &Number) {
         match number {
-            Number::IntegerNumber{value} => self.token(value),
-            Number::DecimalNumber {value } => self.token(value),
-            _ => panic!(),
+            Number::IntegerNumber(value) => self.token(value),
+            Number::DecimalNumber (value ) => self.token(value),
+            Number::HexNumber (value) => self.token(value),
+            Number::BinaryNumber (value) => self.token(value),
+            Number::String (value) => self.token(value),
         }
     }
 

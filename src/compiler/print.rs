@@ -41,8 +41,8 @@ impl PrintContext {
 
     fn number(& self, number: &Number) -> String {
         match number {
-            Number::IntegerNumber{value} => self.token(value),
-            Number::DecimalNumber {value } => self.token(value),
+            Number::IntegerNumber(value) => self.token(value),
+            Number::DecimalNumber(value) => self.token(value),
             _ => panic!(),
         }
     }

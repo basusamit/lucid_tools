@@ -71,21 +71,11 @@ pub struct TypeDeclaration {
 // INT: [0-9]+;
 // STRING: '"' ( '\\' ~[\r\n] | ~[\\"\r\n] )* '"';
 pub enum Number {
-    HexNumber {
-        value: Token,
-    },
-    BinaryNumber {
-        value: Token,
-    },
-    DecimalNumber {
-        value: Token,
-    },
-    IntegerNumber {
-        value: Token,
-    },
-    String {
-        value: Token,
-    },
+    HexNumber(Token),
+    BinaryNumber(Token),
+    DecimalNumber(Token),
+    IntegerNumber(Token),
+    String(Token),
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -427,7 +417,6 @@ pub struct GlobalBlock {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum SourceBlock {
-    // global: 'global' name '{' global_stat* '}';
     GlobalBlock(GlobalBlock),
     ModuleBlock(ModuleBlock),
 }
