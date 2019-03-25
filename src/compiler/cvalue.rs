@@ -42,7 +42,7 @@ use num_bigint::*;
 use std::cmp::max;
 use ndarray::Zip;
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Copy, Clone)]
 pub enum Bit {
     Zero,
     One,
@@ -105,13 +105,34 @@ fn bool_to_bit(a: bool) -> Bit {
 //  localparam P1 = 16'b01xz01xz01xz01xz;
 //  localparam P2 = 16'b00001111xxxxzzzz;
 //  localparam P3 = 16'b00xx01xxxxxxxxxx; // P1 & P2
-pub fn bit_op_and(a: &Bit, b: &Bit) -> Bit {
+pub fn bit_op_and(a: Bit, b: &Bit) -> Bit {
     // if either a or b is a don't care or z, the output is
     // a don't care.  Otherwise, we apply a standard logical and
-    if bit_xz(a) || bit_xz(b) {
+    if bit_xz(&a) || bit_xz(b) {
         return Bit::DontCare;
     }
-    bool_to_bit(bit_to_bool(a) && bit_to_bool(b))
+    bool_to_bit(bit_to_bool(&a) && bit_to_bool(b))
+}
+
+#[test]
+fn test_bit_op_and() {
+    assert_eq!(bit_op_and(Bit::Zero,&Bit::Zero),Bit::Zero);
+    assert_eq!(bit_op_and(Bit::HiZ,&Bit::HiZ),Bit::DontCare);
+    assert_eq!(bit_op_and(Bit::DontCare,&Bit::HiZ),Bit::DontCare);
+    assert_eq!(bit_op_and(Bit::One,&Bit::HiZ),Bit::DontCare);
+    assert_eq!(bit_op_and(Bit::Zero,&Bit::HiZ),Bit::DontCare);
+    assert_eq!(bit_op_and(Bit::HiZ,&Bit::DontCare),Bit::DontCare);
+    assert_eq!(bit_op_and(Bit::DontCare,&Bit::DontCare),Bit::DontCare);
+    assert_eq!(bit_op_and(Bit::One,&Bit::DontCare),Bit::DontCare);
+    assert_eq!(bit_op_and(Bit::Zero,&Bit::DontCare),Bit::DontCare);
+    assert_eq!(bit_op_and(Bit::HiZ,&Bit::One),Bit::DontCare);
+    assert_eq!(bit_op_and(Bit::DontCare,&Bit::One),Bit::DontCare);
+    assert_eq!(bit_op_and(Bit::One,&Bit::One),Bit::One);
+    assert_eq!(bit_op_and(Bit::Zero,&Bit::One),Bit::Zero);
+    assert_eq!(bit_op_and(Bit::HiZ,&Bit::Zero),Bit::DontCare);
+    assert_eq!(bit_op_and(Bit::DontCare,&Bit::Zero),Bit::DontCare);
+    assert_eq!(bit_op_and(Bit::One,&Bit::Zero),Bit::Zero);
+    assert_eq!(bit_op_and(Bit::Zero,&Bit::Zero),Bit::Zero);
 }
 
 
@@ -120,19 +141,38 @@ pub fn bit_op_and(a: &Bit, b: &Bit) -> Bit {
 //  localparam P1 = 16'b01xz01xz01xz01xz;
 //  localparam P2 = 16'b00001111xxxxzzzz;
 //  localparam P4 = 16'b01xx1111x1xxx1xx; // P1 | P2
-pub fn bit_op_or(a: &Bit, b: &Bit) -> Bit {
+pub fn bit_op_or(a: Bit, b: &Bit) -> Bit {
     // if either a or b is a one, return 1
     if a.eq(&Bit::One) || b.eq(&Bit::One) {
         return Bit::One;
     }
     // Neither is a one.  So if either is a XZ, return a
     // don't care
-    if bit_xz(a) || bit_xz(b) {
+    if bit_xz(&a) || bit_xz(b) {
         return Bit::DontCare;
     }
     return Bit::Zero;
 }
 
+#[test]
+fn test_bit_op_or() {
+    assert_eq!(bit_op_or(Bit::HiZ, &Bit::HiZ), Bit::DontCare);
+    assert_eq!(bit_op_or(Bit::DontCare, &Bit::HiZ), Bit::DontCare);
+    assert_eq!(bit_op_or(Bit::One, &Bit::HiZ), Bit::One);
+    assert_eq!(bit_op_or(Bit::Zero, &Bit::HiZ), Bit::DontCare);
+    assert_eq!(bit_op_or(Bit::HiZ, &Bit::DontCare), Bit::DontCare);
+    assert_eq!(bit_op_or(Bit::DontCare, &Bit::DontCare), Bit::DontCare);
+    assert_eq!(bit_op_or(Bit::One, &Bit::DontCare), Bit::One);
+    assert_eq!(bit_op_or(Bit::Zero, &Bit::DontCare), Bit::DontCare);
+    assert_eq!(bit_op_or(Bit::HiZ, &Bit::One), Bit::One);
+    assert_eq!(bit_op_or(Bit::DontCare, &Bit::One), Bit::One);
+    assert_eq!(bit_op_or(Bit::One, &Bit::One), Bit::One);
+    assert_eq!(bit_op_or(Bit::Zero, &Bit::One), Bit::One);
+    assert_eq!(bit_op_or(Bit::HiZ, &Bit::Zero), Bit::DontCare);
+    assert_eq!(bit_op_or(Bit::DontCare, &Bit::Zero), Bit::DontCare);
+    assert_eq!(bit_op_or(Bit::One, &Bit::Zero), Bit::One);
+    assert_eq!(bit_op_or(Bit::Zero, &Bit::Zero), Bit::Zero);
+}
 
 
 // Lucid truth tables:
@@ -140,26 +180,57 @@ pub fn bit_op_or(a: &Bit, b: &Bit) -> Bit {
 //  localparam P1 = 16'b01xz01xz01xz01xz;
 //  localparam P2 = 16'b00001111xxxxzzzz;
 //  localparam P5 = 16'b01xx1011x1xxx1xx; // P1 ^ P2
-pub fn bit_op_xor(a: &Bit, b: &Bit) -> Bit {
+pub fn bit_op_xor(a: Bit, b: &Bit) -> Bit {
     // if either a or b is a one, return 1
     if a.eq(&Bit::One) ^ b.eq(&Bit::One) {
         return Bit::One;
     }
     // Neither is a one.  So if either is a XZ, return a
     // don't care
-    if bit_xz(a) || bit_xz(b) {
+    if bit_xz(&a) || bit_xz(b) {
         return Bit::DontCare;
     }
     return Bit::Zero;
 }
 
+#[test]
+fn test_bit_op_xor() {
+    assert_eq!(bit_op_xor(Bit::HiZ,&Bit::HiZ),Bit::DontCare);
+    assert_eq!(bit_op_xor(Bit::DontCare,&Bit::HiZ),Bit::DontCare);
+    assert_eq!(bit_op_xor(Bit::One,&Bit::HiZ),Bit::One);
+    assert_eq!(bit_op_xor(Bit::Zero,&Bit::HiZ),Bit::DontCare);
+    assert_eq!(bit_op_xor(Bit::HiZ,&Bit::DontCare),Bit::DontCare);
+    assert_eq!(bit_op_xor(Bit::DontCare,&Bit::DontCare),Bit::DontCare);
+    assert_eq!(bit_op_xor(Bit::One,&Bit::DontCare),Bit::One);
+    assert_eq!(bit_op_xor(Bit::Zero,&Bit::DontCare),Bit::DontCare);
+    assert_eq!(bit_op_xor(Bit::HiZ,&Bit::One),Bit::One);
+    assert_eq!(bit_op_xor(Bit::DontCare,&Bit::One),Bit::One);
+    assert_eq!(bit_op_xor(Bit::One,&Bit::One),Bit::Zero);
+    assert_eq!(bit_op_xor(Bit::Zero,&Bit::One),Bit::One);
+    assert_eq!(bit_op_xor(Bit::HiZ,&Bit::Zero),Bit::DontCare);
+    assert_eq!(bit_op_xor(Bit::DontCare,&Bit::Zero),Bit::DontCare);
+    assert_eq!(bit_op_xor(Bit::One,&Bit::Zero),Bit::One);
+    assert_eq!(bit_op_xor(Bit::Zero,&Bit::Zero),Bit::Zero);
+}
 
+// Lucid truth tables:
+//
+//  localparam P7 = 4'b01xz;
+//  localparam P8 = 4'b10xz;
 pub fn bit_op_not(a: &Bit) -> Bit {
     if bit_xz(a) {
-        Bit::DontCare
+        a.clone()
     } else {
         bool_to_bit(!bit_to_bool(a))
     }
+}
+
+#[test]
+fn test_bit_not() {
+    assert_eq!(bit_op_not(&Bit::Zero),Bit::One);
+    assert_eq!(bit_op_not(&Bit::One),Bit::Zero);
+    assert_eq!(bit_op_not(&Bit::DontCare),Bit::DontCare);
+    assert_eq!(bit_op_not(&Bit::HiZ),Bit::HiZ);
 }
 
 // Lucid truth tables:
@@ -167,94 +238,30 @@ pub fn bit_op_not(a: &Bit) -> Bit {
 //  localparam P1 = 16'b01xz01xz01xz01xz;
 //  localparam P2 = 16'b00001111xxxxzzzz;
 //  localparam P6 = 16'b10xx0100x0xxx0xx; P1 ~^ P2
-pub fn bit_op_xnor(a: &Bit, b: &Bit) -> Bit {
+pub fn bit_op_xnor(a: Bit, b: &Bit) -> Bit {
     bit_op_not(&bit_op_xor(a,b))
 }
 
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_bit_op_and() {
-        assert_eq!(bit_op_and(&Bit::Zero,&Bit::Zero),Bit::Zero);
-        assert_eq!(bit_op_and(&Bit::HiZ,&Bit::HiZ),Bit::DontCare);
-        assert_eq!(bit_op_and(&Bit::DontCare,&Bit::HiZ),Bit::DontCare);
-        assert_eq!(bit_op_and(&Bit::One,&Bit::HiZ),Bit::DontCare);
-        assert_eq!(bit_op_and(&Bit::Zero,&Bit::HiZ),Bit::DontCare);
-        assert_eq!(bit_op_and(&Bit::HiZ,&Bit::DontCare),Bit::DontCare);
-        assert_eq!(bit_op_and(&Bit::DontCare,&Bit::DontCare),Bit::DontCare);
-        assert_eq!(bit_op_and(&Bit::One,&Bit::DontCare),Bit::DontCare);
-        assert_eq!(bit_op_and(&Bit::Zero,&Bit::DontCare),Bit::DontCare);
-        assert_eq!(bit_op_and(&Bit::HiZ,&Bit::One),Bit::DontCare);
-        assert_eq!(bit_op_and(&Bit::DontCare,&Bit::One),Bit::DontCare);
-        assert_eq!(bit_op_and(&Bit::One,&Bit::One),Bit::One);
-        assert_eq!(bit_op_and(&Bit::Zero,&Bit::One),Bit::Zero);
-        assert_eq!(bit_op_and(&Bit::HiZ,&Bit::Zero),Bit::DontCare);
-        assert_eq!(bit_op_and(&Bit::DontCare,&Bit::Zero),Bit::DontCare);
-        assert_eq!(bit_op_and(&Bit::One,&Bit::Zero),Bit::Zero);
-        assert_eq!(bit_op_and(&Bit::Zero,&Bit::Zero),Bit::Zero);
-    }
-
-    #[test]
-    fn test_bit_op_or() {
-        assert_eq!(bit_op_or(&Bit::HiZ, &Bit::HiZ), Bit::DontCare);
-        assert_eq!(bit_op_or(&Bit::DontCare, &Bit::HiZ), Bit::DontCare);
-        assert_eq!(bit_op_or(&Bit::One, &Bit::HiZ), Bit::One);
-        assert_eq!(bit_op_or(&Bit::Zero, &Bit::HiZ), Bit::DontCare);
-        assert_eq!(bit_op_or(&Bit::HiZ, &Bit::DontCare), Bit::DontCare);
-        assert_eq!(bit_op_or(&Bit::DontCare, &Bit::DontCare), Bit::DontCare);
-        assert_eq!(bit_op_or(&Bit::One, &Bit::DontCare), Bit::One);
-        assert_eq!(bit_op_or(&Bit::Zero, &Bit::DontCare), Bit::DontCare);
-        assert_eq!(bit_op_or(&Bit::HiZ, &Bit::One), Bit::One);
-        assert_eq!(bit_op_or(&Bit::DontCare, &Bit::One), Bit::One);
-        assert_eq!(bit_op_or(&Bit::One, &Bit::One), Bit::One);
-        assert_eq!(bit_op_or(&Bit::Zero, &Bit::One), Bit::One);
-        assert_eq!(bit_op_or(&Bit::HiZ, &Bit::Zero), Bit::DontCare);
-        assert_eq!(bit_op_or(&Bit::DontCare, &Bit::Zero), Bit::DontCare);
-        assert_eq!(bit_op_or(&Bit::One, &Bit::Zero), Bit::One);
-        assert_eq!(bit_op_or(&Bit::Zero, &Bit::Zero), Bit::Zero);
-    }
-
-    #[test]
-    fn test_bit_op_xor() {
-        assert_eq!(bit_op_xor(&Bit::HiZ,&Bit::HiZ),Bit::DontCare);
-        assert_eq!(bit_op_xor(&Bit::DontCare,&Bit::HiZ),Bit::DontCare);
-        assert_eq!(bit_op_xor(&Bit::One,&Bit::HiZ),Bit::One);
-        assert_eq!(bit_op_xor(&Bit::Zero,&Bit::HiZ),Bit::DontCare);
-        assert_eq!(bit_op_xor(&Bit::HiZ,&Bit::DontCare),Bit::DontCare);
-        assert_eq!(bit_op_xor(&Bit::DontCare,&Bit::DontCare),Bit::DontCare);
-        assert_eq!(bit_op_xor(&Bit::One,&Bit::DontCare),Bit::One);
-        assert_eq!(bit_op_xor(&Bit::Zero,&Bit::DontCare),Bit::DontCare);
-        assert_eq!(bit_op_xor(&Bit::HiZ,&Bit::One),Bit::One);
-        assert_eq!(bit_op_xor(&Bit::DontCare,&Bit::One),Bit::One);
-        assert_eq!(bit_op_xor(&Bit::One,&Bit::One),Bit::Zero);
-        assert_eq!(bit_op_xor(&Bit::Zero,&Bit::One),Bit::One);
-        assert_eq!(bit_op_xor(&Bit::HiZ,&Bit::Zero),Bit::DontCare);
-        assert_eq!(bit_op_xor(&Bit::DontCare,&Bit::Zero),Bit::DontCare);
-        assert_eq!(bit_op_xor(&Bit::One,&Bit::Zero),Bit::One);
-        assert_eq!(bit_op_xor(&Bit::Zero,&Bit::Zero),Bit::Zero);
-    }
-
-    #[test]
-    fn test_bit_op_xnor() {
-        assert_eq!(bit_op_xnor(&Bit::HiZ,&Bit::HiZ),Bit::DontCare);
-        assert_eq!(bit_op_xnor(&Bit::DontCare,&Bit::HiZ),Bit::DontCare);
-        assert_eq!(bit_op_xnor(&Bit::One,&Bit::HiZ),Bit::Zero);
-        assert_eq!(bit_op_xnor(&Bit::Zero,&Bit::HiZ),Bit::DontCare);
-        assert_eq!(bit_op_xnor(&Bit::HiZ,&Bit::DontCare),Bit::DontCare);
-        assert_eq!(bit_op_xnor(&Bit::DontCare,&Bit::DontCare),Bit::DontCare);
-        assert_eq!(bit_op_xnor(&Bit::One,&Bit::DontCare),Bit::Zero);
-        assert_eq!(bit_op_xnor(&Bit::Zero,&Bit::DontCare),Bit::DontCare);
-        assert_eq!(bit_op_xnor(&Bit::HiZ,&Bit::One),Bit::Zero);
-        assert_eq!(bit_op_xnor(&Bit::DontCare,&Bit::One),Bit::Zero);
-        assert_eq!(bit_op_xnor(&Bit::One,&Bit::One),Bit::One);
-        assert_eq!(bit_op_xnor(&Bit::Zero,&Bit::One),Bit::Zero);
-        assert_eq!(bit_op_xnor(&Bit::HiZ,&Bit::Zero),Bit::DontCare);
-        assert_eq!(bit_op_xnor(&Bit::DontCare,&Bit::Zero),Bit::DontCare);
-        assert_eq!(bit_op_xnor(&Bit::One,&Bit::Zero),Bit::Zero);
-        assert_eq!(bit_op_xnor(&Bit::Zero,&Bit::Zero),Bit::One);
-    }
+#[test]
+fn test_bit_op_xnor() {
+    assert_eq!(bit_op_xnor(Bit::HiZ,&Bit::HiZ),Bit::DontCare);
+    assert_eq!(bit_op_xnor(Bit::DontCare,&Bit::HiZ),Bit::DontCare);
+    assert_eq!(bit_op_xnor(Bit::One,&Bit::HiZ),Bit::Zero);
+    assert_eq!(bit_op_xnor(Bit::Zero,&Bit::HiZ),Bit::DontCare);
+    assert_eq!(bit_op_xnor(Bit::HiZ,&Bit::DontCare),Bit::DontCare);
+    assert_eq!(bit_op_xnor(Bit::DontCare,&Bit::DontCare),Bit::DontCare);
+    assert_eq!(bit_op_xnor(Bit::One,&Bit::DontCare),Bit::Zero);
+    assert_eq!(bit_op_xnor(Bit::Zero,&Bit::DontCare),Bit::DontCare);
+    assert_eq!(bit_op_xnor(Bit::HiZ,&Bit::One),Bit::Zero);
+    assert_eq!(bit_op_xnor(Bit::DontCare,&Bit::One),Bit::Zero);
+    assert_eq!(bit_op_xnor(Bit::One,&Bit::One),Bit::One);
+    assert_eq!(bit_op_xnor(Bit::Zero,&Bit::One),Bit::Zero);
+    assert_eq!(bit_op_xnor(Bit::HiZ,&Bit::Zero),Bit::DontCare);
+    assert_eq!(bit_op_xnor(Bit::DontCare,&Bit::Zero),Bit::DontCare);
+    assert_eq!(bit_op_xnor(Bit::One,&Bit::Zero),Bit::Zero);
+    assert_eq!(bit_op_xnor(Bit::Zero,&Bit::Zero),Bit::One);
 }
+
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ConstantValue {
@@ -301,15 +308,34 @@ impl ConstantValue {
         ret
     }
 
-    pub fn bitwise(&self, other: &ConstantValue, func: &Fn(&Bit, &Bit) -> Bit) -> ConstantValue {
+    pub fn from_bit(bit: &Bit) -> ConstantValue {
+        let mut ret = ConstantValue::one_dim(1);
+        ret.signed = Sign::NoSign;
+        ret.value[0] = *bit;
+        ret
+    }
+
+    pub fn bitwise(&self, other: &ConstantValue, func: &Fn(Bit, &Bit) -> Bit) -> ConstantValue {
         let mut res = ArrayD::<Bit>::zeros(self.value.dim());
         Zip::from(&mut res).and(&self.value).and(&other.value).apply(|a, b, c| {
-            *a = func(&b,&c);
+            *a = func(*b,&c);
         });
         ConstantValue {
             value: res,
             signed: self.signed
         }
+    }
+
+    pub fn map(&self, func: fn(&Bit) -> Bit) -> ConstantValue {
+        ConstantValue {
+            value: self.value.map(func),
+            signed: self.signed
+        }
+    }
+
+    pub fn fold(&self, init: Bit, func: &Fn(Bit, &Bit) -> Bit) -> ConstantValue {
+        let res = self.value.fold(init, func);
+        ConstantValue::from_bit(&res)
     }
 
     pub fn is_number(&self) -> bool {

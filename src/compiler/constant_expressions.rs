@@ -32,7 +32,7 @@ use super::cvalue::*;
 use super::ast::Expression::*;
 use super::token::*;
 use num_bigint::*;
-use std::str::FromStr;
+use ndarray::*;
 
 pub type ConstantExpressionResult = Result<ConstantValue, ProgramError>;
 
@@ -91,7 +91,7 @@ impl<'a> ConstantExpressionContext<'a> {
         Ok(ConstantValue::from_bool(func(lhs_val, rhs_val)))
     }
 
-    fn bitwise_op(&self, lhs: &ConstantValue, rhs: &ConstantValue, func: &Fn(&Bit, &Bit) -> Bit) -> ConstantExpressionResult {
+    fn bitwise_op(&self, lhs: &ConstantValue, rhs: &ConstantValue, func: &Fn(Bit, &Bit) -> Bit) -> ConstantExpressionResult {
         if lhs.value.shape() != rhs.value.shape() {
             return Err(ProgramError::of("shape mismatch", "Can only apply bitwise operators to arrays of the same dimensional size"));
         }
@@ -120,13 +120,51 @@ impl<'a> ConstantExpressionContext<'a> {
         }
     }
 
+    fn prefix(&self, operator: &Token, operand: &Expression) -> ConstantExpressionResult {
+        let op_value = self.constant_expression(operand)?;
+        match &operator.kind {
+            TokenKind::BITAND => Ok(op_value.fold(Bit::One,&bit_op_and)),
+            TokenKind::BITOR => Ok(op_value.fold(Bit::Zero, &bit_op_or)),
+            TokenKind::BITXOR => Ok(op_value.fold(Bit::Zero, &bit_op_xor)),
+            TokenKind::BITNOT => Ok(op_value.map(bit_op_not)),
+            TokenKind::BITNAND => Ok(op_value.fold(Bit::One, &bit_op_and).map(bit_op_not)),
+            TokenKind::BITNOR => Ok(op_value.fold(Bit::Zero, &bit_op_or).map(bit_op_not)),
+            TokenKind::BITXNOR => Ok(op_value.fold(Bit::Zero, &bit_op_xor).map(bit_op_not)),
+            _ => Err(ProgramError::of("unsupported_prefix", "prefix operator is unsupported")),
+        }
+    }
+
+    pub fn array(&self, args: &[Box<Expression>]) -> ConstantExpressionResult {
+        let mut exprs = vec![];
+        for x in args {
+            exprs.push(self.constant_expression(&*x)?.value.insert_axis(Axis(0)));
+        }
+        let mut views = vec![];
+        for x in &exprs {
+            views.push(x.view());
+        }
+        let value =  stack(Axis(0),&views);
+        if !value.is_ok() {
+            return Err(ProgramError::of("Unable to concatenate arrays","{A,B,C} must all have equal size"));
+        }
+        Ok(ConstantValue {
+            value: value.unwrap(),
+            signed: Sign::NoSign,
+        })
+    }
+
+
     pub fn constant_expression(&self, expr: &Expression) -> ConstantExpressionResult {
         match expr {
             NumberExpression(n) => self.number(n),
             ExpressionGroup(g) => self.constant_expression(g),
             InfixExpression {lhs, operator, rhs} => self.infix(lhs, operator, rhs),
-
-            _ => Err(ProgramError::of("Foo", "Bar"))
+            PrefixExpression {operator, operand} => self.prefix(operator,operand),
+            ArrayExpression {elements} => self.array(elements),
+            _ => {
+                println!("{:?}",expr);
+                Err(ProgramError::of("Foo", "Bar"))
+            }
         }
     }
 
@@ -152,7 +190,7 @@ impl<'a> ConstantExpressionContext<'a> {
 
     fn global_statement(&mut self, g: &GlobalStatement) -> SemanticAnalysisResult {
         match g {
-            GlobalStatement::StructureDeclaration(s) => Ok(()),
+            GlobalStatement::StructureDeclaration(_s) => Ok(()),
             GlobalStatement::ConstantDeclaration(c) => self.constant_declaration(c),
         }
     }
