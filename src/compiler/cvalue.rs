@@ -296,7 +296,7 @@ impl ConstantValue {
         // We need to convert this to a constant value
         let mut ret = ConstantValue::one_dim(max(1,bigint.bits()));
         // This is the binary representation of the value
-        let (sign,bin_rep) = bigint.to_radix_le(2);
+        let (sign,bin_rep) = bigint.to_radix_be(2);
         for digit in 0..bin_rep.len() {
             match bin_rep[digit] {
                 0 => ret.value[digit] = Bit::Zero,
@@ -313,6 +313,13 @@ impl ConstantValue {
         ret.signed = Sign::NoSign;
         ret.value[0] = *bit;
         ret
+    }
+
+    pub fn from_bitvec(bits: &[Bit]) -> ConstantValue {
+        ConstantValue {
+            value: ArrayD::<Bit>::from_shape_vec(vec![bits.len()], bits.to_vec()).unwrap(),
+            signed: Sign::NoSign,
+        }
     }
 
     pub fn bitwise(&self, other: &ConstantValue, func: &Fn(Bit, &Bit) -> Bit) -> ConstantValue {
@@ -357,6 +364,17 @@ impl ConstantValue {
                     _ => panic!("Unexpected bit")
                 })
             .collect::<Vec<u8>>();
-        BigInt::from_radix_le(self.signed,&binary,2).unwrap()
+        BigInt::from_radix_be(self.signed,&binary,2).unwrap()
+    }
+
+    pub fn flatten(&self) -> ConstantValue {
+        let vec = self.value.iter()
+            .map(|x| x.clone())
+            .collect::<Vec<Bit>>();
+        let value = ArrayD::<Bit>::from_shape_vec(vec![vec.len()], vec).unwrap();
+        ConstantValue {
+            value,
+            signed: self.signed
+        }
     }
 }

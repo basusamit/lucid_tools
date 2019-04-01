@@ -1,0 +1,24 @@
+global baz {
+   const y = (3*(6123 + 412) - 71)/2 < 5;
+   const Qz = 5;
+   const Qh = {{5,5},{4,6},{4,7}};
+   const gb = 3x{5};
+   const gt = 2x{{{4},{4},{5}}};
+   const gs = {4,4,5};
+   const x = Qz + 5;
+   const j = $flatten(gs);
+   const k = $flatten(gt);
+   const k_3 = $assert_eq($flatten({4,4,5}), 9h125);
+   const k_2 = $assert_eq($flatten({{4},{4},{5}}), 9h125);
+   const k_1 = $assert_eq(k, 18h24b25);
+   const k_4 = $assert_eq($flatten(c{gs,gs}), 18h24b25);
+   const k1 = 10h145;
+   const k2 = 10b110010zzx;
+   const k4 = 10d137;
+   const unused = $assert_eq($flatten(5),5);
+}
+
+module foobar () {
+   const x = 32;
+   const y = x + 64;
+}
