@@ -36,6 +36,7 @@ use ndarray::prelude::*;
 use ndarray::*;
 use num_traits::cast::ToPrimitive;
 use num_traits::Num;
+use num_traits::identities::Zero;
 
 pub type ConstantExpressionResult = Result<ConstantValue, ProgramError>;
 
@@ -317,14 +318,42 @@ impl<'a> ConstantExpressionContext<'a> {
         })
     }
 
-    fn signal(&self, s: &[NamedBitSelector]) -> ConstantExpressionResult {
-        if s.len() == 1 && s[0].selector.arrays.is_empty() && s[0].selector.selector.is_none() {
-            let prefixed_name = self.prefixed_name(&s[0].name.text(self.input));
-            if let Some(SymbolKind::Constant(val)) = self.symbols.get(&prefixed_name) {
-                return Ok(val.clone())
-            }
+    fn ternary(&self, selector: &Expression, first: &Expression, second: &Expression) -> ConstantExpressionResult {
+        let select = self.constant_expression(selector)?;
+        if select.as_int().is_zero() {
+            self.constant_expression(second)
+        } else {
+            self.constant_expression(first)
         }
-        Err(ProgramError::of("Unsupported signal expression","Constant expression selection unsupported"))
+
+    }
+
+    fn signal_base(&self, name: &String) -> ConstantExpressionResult {
+        let prefixed_name = self.prefixed_name(name);
+        if let Some(SymbolKind::Constant(val)) = self.symbols.get(&prefixed_name) {
+            return Ok(val.clone());
+        } else {
+            return Err(ProgramError::of("No signal found", "constant not named"));
+        }
+    }
+
+    // We want to look up a signal (this is for a rhs only)
+    // We start with the signal itself, and then apply the various
+    // bit and name selections.  The first lookup is a name, to give
+    // us the entry in the symbol table.
+    //    We then have either a name or a bit selection
+    //    Each of these can be the last or not-last in the list
+    //    If it is not the last, then the bit selection must be unique - i.e., point
+    //      to a single entry - that means all array indices must be constant values
+    //      no bit selectors allowed.
+    fn signal(&self, s: &[NamedBitSelector]) -> ConstantExpressionResult {
+        if s.len() == 0 {
+            return Err(ProgramError::of("Invalid signal expression", "Signal expresison is not valid"));
+        }
+        // Get the base value from the symbol table
+        let base = self.signal_base(&s[0].name.text(self.input))?;
+
+        Ok(base)
     }
 
     fn flatten(&self, arguments: &[Box<Expression>]) -> ConstantExpressionResult {
@@ -368,10 +397,7 @@ impl<'a> ConstantExpressionContext<'a> {
             DuplicateExpression {multiplier, base} => self.dup(multiplier, base),
             FunctionExpression {name, arguments} => self.function(name, arguments),
             ConcatenateExpression {expressions} => self.concat(expressions),
-            _ => {
-                println!("{:?}",expr);
-                Err(ProgramError::of("Foo", "Bar"))
-            }
+            TernaryExpression { selector, first, second } => self.ternary(selector, first, second),
         }
     }
 

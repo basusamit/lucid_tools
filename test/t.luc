@@ -16,6 +16,7 @@ global baz {
    const k2 = 10b110010zzx;
    const k4 = 10d137;
    const unused = $assert_eq($flatten(5),5);
+   const unused_1 = $assert_eq( (3>1) ? 5 : 7, 5);
 }
 
 module foobar () {
