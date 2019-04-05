@@ -41,6 +41,7 @@ use std::ops::Add;
 use num_bigint::*;
 use std::cmp::max;
 use ndarray::Zip;
+use num_traits::cast::ToPrimitive;
 
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
 pub enum Bit {
@@ -319,6 +320,25 @@ impl ConstantValue {
         ConstantValue {
             value: ArrayD::<Bit>::from_shape_vec(vec![bits.len()], bits.to_vec()).unwrap(),
             signed: Sign::NoSign,
+        }
+    }
+
+    pub fn select(&self, ndx: BigInt) -> ConstantValue {
+        ConstantValue::from_bit(&self.value[ndx.to_u32().unwrap() as usize])
+    }
+
+    pub fn slice(&self, ndx: BigInt) -> ConstantValue {
+        if self.value.ndim() == 1 {
+            return self.select(ndx);
+        }
+        let last_axis = self.value.ndim()-1;
+        let index = ndx.to_u32().unwrap() as usize;
+        let view = self.value.index_axis(Axis(0), index);
+        let value = view.to_owned();
+        println!("Slice: \nBase {:?},\n index {:?}\n view {:?}\n value {:?}\n", self.value, index, view, value);
+        ConstantValue {
+            value,
+            signed: self.signed
         }
     }
 

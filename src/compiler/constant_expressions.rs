@@ -127,7 +127,7 @@ impl<'a> ConstantExpressionContext<'a> {
             return Err(ProgramError::of("bit width exceeded","requested constant is larger than given bit width"));
         }
         for _cnt in data_bits_trimmed.len() .. bit_width {
-            data_bits_trimmed.push(Bit::Zero);
+            data_bits_trimmed.insert(0,Bit::Zero);
         }
         Ok(ConstantValue::from_bitvec(&data_bits_trimmed))
     }
@@ -337,6 +337,28 @@ impl<'a> ConstantExpressionContext<'a> {
         }
     }
 
+    fn signal_apply_arrays(&self, base: &ConstantValue, arrays: &[Box<Expression>]) -> ConstantExpressionResult {
+        let mut cv = base.clone();
+        for index in arrays {
+            let ndx = self.constant_expression(index)?;
+            cv = cv.slice(ndx.as_int());
+        }
+        println!("cv: {:?}\n", cv);
+        Ok(cv)
+    }
+
+    fn signal_apply_bitselector(&self, base: &ConstantValue, select: &Option<BitSelector>) -> ConstantExpressionResult {
+        Ok(base.clone())
+    }
+
+    fn signal_apply_selector(&self, base: &ConstantValue, select: &BitSelection) -> ConstantExpressionResult {
+        // First apply the arrays
+        let base_arrays = self.signal_apply_arrays(base, &select.arrays)?;
+        // Then apply the bit selector
+        let base_selected = self.signal_apply_bitselector(&base_arrays, &select.selector)?;
+        Ok(base_selected)
+    }
+
     // We want to look up a signal (this is for a rhs only)
     // We start with the signal itself, and then apply the various
     // bit and name selections.  The first lookup is a name, to give
@@ -351,8 +373,8 @@ impl<'a> ConstantExpressionContext<'a> {
             return Err(ProgramError::of("Invalid signal expression", "Signal expresison is not valid"));
         }
         // Get the base value from the symbol table
-        let base = self.signal_base(&s[0].name.text(self.input))?;
-
+        let mut base = self.signal_base(&s[0].name.text(self.input))?;
+        base = self.signal_apply_selector(&base, &s[0].selector)?;
         Ok(base)
     }
 
@@ -387,6 +409,7 @@ impl<'a> ConstantExpressionContext<'a> {
     }
 
     pub fn constant_expression(&self, expr: &Expression) -> ConstantExpressionResult {
+        println!("{:?}", expr);
         match expr {
             SignalExpression(s) => self.signal(s),
             NumberExpression(n) => self.number(n),

@@ -331,7 +331,7 @@ impl Lexer {
     pub fn match_number(&mut self) -> LexerResult {
         if let Some(chr) = self.chr {
             if chr.eq(&'0') {
-                return self.match_decimal();
+                return self.match_integer();
             }
             // We see a digit - this could be
             // a size prefix. To determine if it is, we have

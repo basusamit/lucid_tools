@@ -15,6 +15,10 @@ global baz {
    const k1 = 10h145;
    const k2 = 10b110010zzx;
    const k4 = 10d137;
+   const z = {k4,k4};
+   const k7 = z[0];
+   const k8 = z[0][0];
+   const unused_0 = $assert_eq(k8,1);
    const unused = $assert_eq($flatten(5),5);
    const unused_1 = $assert_eq( (3>1) ? 5 : 7, 5);
 }
