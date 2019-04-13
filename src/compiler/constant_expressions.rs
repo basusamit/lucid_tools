@@ -114,6 +114,7 @@ impl<'a> ConstantExpressionContext<'a> {
             Err(_) => return Err(ProgramError::of("bad parse","biguint")),
         };
         println!("Number as bigint {}", big_int);
+        // Assume that integers are unsigned unless they are negative
         Ok(ConstantValue::from_bigint(&big_int))
     }
 
@@ -269,7 +270,7 @@ impl<'a> ConstantExpressionContext<'a> {
         }
         Ok(ConstantValue {
             value: value.unwrap(),
-            signed: Sign::NoSign,
+            signed: Sign::Plus,
         })
     }
 
@@ -314,7 +315,7 @@ impl<'a> ConstantExpressionContext<'a> {
         }
         Ok(ConstantValue {
             value: value.unwrap(),
-            signed: Sign::NoSign,
+            signed: Sign::Plus,
         })
     }
 

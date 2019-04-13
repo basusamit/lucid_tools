@@ -274,13 +274,13 @@ impl ConstantValue {
     pub fn empty() -> ConstantValue {
         ConstantValue {
             value: Array::zeros(vec![]),
-            signed: Sign::NoSign,
+            signed: Sign::Plus,
         }
     }
     pub fn one_dim(count : usize) -> ConstantValue {
         ConstantValue {
             value: Array::zeros(vec![count]),
-            signed: Sign::NoSign,
+            signed: Sign::Plus,
         }
     }
 
@@ -311,7 +311,7 @@ impl ConstantValue {
 
     pub fn from_bit(bit: &Bit) -> ConstantValue {
         let mut ret = ConstantValue::one_dim(1);
-        ret.signed = Sign::NoSign;
+        ret.signed = Sign::Plus;
         ret.value[0] = *bit;
         ret
     }
@@ -319,12 +319,15 @@ impl ConstantValue {
     pub fn from_bitvec(bits: &[Bit]) -> ConstantValue {
         ConstantValue {
             value: ArrayD::<Bit>::from_shape_vec(vec![bits.len()], bits.to_vec()).unwrap(),
-            signed: Sign::NoSign,
+            signed: Sign::Plus,
         }
     }
 
     pub fn select(&self, ndx: BigInt) -> ConstantValue {
-        ConstantValue::from_bit(&self.value[ndx.to_u32().unwrap() as usize])
+        // The index is little endian
+        let n = ndx.to_u32().unwrap() as usize;
+        let m = self.value.len();
+        ConstantValue::from_bit(&self.value[m - 1 - n])
     }
 
     pub fn slice(&self, ndx: BigInt) -> ConstantValue {
