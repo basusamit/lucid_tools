@@ -20,6 +20,7 @@
 //OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 //SOFTWARE.
 use std::slice::Iter;
+use crate::compiler::ast::{InfixOperator, PrefixOperator};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct TextRange {
@@ -200,6 +201,49 @@ impl Token {
         }
         100
     }
+
+    pub fn as_infix_operator(&self) -> Result<InfixOperator,()> {
+        match self.kind {
+            TokenKind::PLUS => Ok(InfixOperator::Add),
+            TokenKind::MINUS => Ok(InfixOperator::Subtract),
+            TokenKind::MULTIPLY => Ok(InfixOperator::Multiply),
+            TokenKind::DIVIDE => Ok(InfixOperator::Divide),
+            TokenKind::BITAND => Ok(InfixOperator::BitAND),
+            TokenKind::BITOR => Ok(InfixOperator::BitOR),
+            TokenKind::BITXOR => Ok(InfixOperator::BitXOR),
+            TokenKind::BITXNOR => Ok(InfixOperator::BitXNOR),
+            TokenKind::LEFTSHIFT => Ok(InfixOperator::LeftShift),
+            TokenKind::RIGHTSHIFT=> Ok(InfixOperator::RightShift),
+            TokenKind::LEFTSIGNEDSHIFT => Ok(InfixOperator::LeftSignedShift),
+            TokenKind::RIGHTSIGNEDSHIFT => Ok(InfixOperator::RightSignedShift),
+            TokenKind::GT => Ok(InfixOperator::GreaterThan),
+            TokenKind::GE => Ok(InfixOperator::GreaterEquals),
+            TokenKind::LT => Ok(InfixOperator::LessThan),
+            TokenKind::LE => Ok(InfixOperator::LessEquals),
+            TokenKind::EQ => Ok(InfixOperator::Equals),
+            TokenKind::NEQ => Ok(InfixOperator::NotEquals),
+            TokenKind::LOGICALAND => Ok(InfixOperator::LogicalAnd),
+            TokenKind::LOGICALOR => Ok(InfixOperator::LogicalOr),
+            _ => Err(())
+        }
+    }
+
+    pub fn as_prefix_operator(&self) -> Result<PrefixOperator, ()> {
+        match self.kind {
+            TokenKind::MINUS => Ok(PrefixOperator::Negate),
+            TokenKind::BITOR => Ok(PrefixOperator::Or),
+            TokenKind::BITAND => Ok(PrefixOperator::And),
+            TokenKind::BITNAND => Ok(PrefixOperator::Nand),
+            TokenKind::BITNOR => Ok(PrefixOperator::Nor),
+            TokenKind::BITXOR => Ok(PrefixOperator::Xor),
+            TokenKind::BITXNOR => Ok(PrefixOperator::Xnor),
+            TokenKind::BITNOT => Ok(PrefixOperator::Not),
+            TokenKind::LOGICALNOT => Ok(PrefixOperator::LogicalNot),
+            _ => Err(())
+        }
+    }
+
+
 }
 
 impl TokenInfo {
@@ -249,7 +293,7 @@ impl TokenInfo {
             TokenInfo { kind: TokenKind::LOGICALOR, text: "||", precedence: 2, opkind: OperatorType::Infix },
             TokenInfo { kind: TokenKind::TERNARY, text: "?", precedence: 1, opkind: OperatorType::Infix },
             TokenInfo { kind: TokenKind::COLON, text: ":", precedence: 0, opkind: OperatorType::None},
-            TokenInfo { kind: TokenKind::ASSIGN, text: "=", precedence: 0, opkind: OperatorType::Infix },
+            TokenInfo { kind: TokenKind::ASSIGN, text: "=", precedence: 0, opkind: OperatorType::None },
             TokenInfo { kind: TokenKind::COMMA, text: ",", precedence: 0, opkind: OperatorType::None },
             TokenInfo { kind: TokenKind::SEMICOLON, text: ";", precedence: 0, opkind: OperatorType::None },
             TokenInfo { kind: TokenKind::DUPLICATE, text: "x{", precedence: 11, opkind: OperatorType::Infix},

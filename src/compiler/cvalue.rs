@@ -37,11 +37,12 @@ use ndarray::prelude::*;
 //}
 
 use num_traits::Zero;
-use std::ops::Add;
+use std::ops::*;
 use num_bigint::*;
 use std::cmp::max;
 use ndarray::Zip;
 use num_traits::cast::ToPrimitive;
+use std::iter::*;
 
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
 pub enum Bit {
@@ -324,6 +325,7 @@ impl ConstantValue {
     }
 
     pub fn select(&self, ndx: BigInt) -> ConstantValue {
+        assert_eq!(self.value.ndim(),1);
         // The index is little endian
         let n = ndx.to_u32().unwrap() as usize;
         let m = self.value.len();
@@ -334,7 +336,6 @@ impl ConstantValue {
         if self.value.ndim() == 1 {
             return self.select(ndx);
         }
-        let last_axis = self.value.ndim()-1;
         let index = ndx.to_u32().unwrap() as usize;
         let view = self.value.index_axis(Axis(0), index);
         let value = view.to_owned();
@@ -343,6 +344,18 @@ impl ConstantValue {
             value,
             signed: self.signed
         }
+    }
+
+    pub fn range(&self, start: u32, stop: u32) -> ConstantValue {
+        assert_eq!(self.value.ndim(),1);
+        assert!(start < stop);
+        let mylen = self.value.len();
+        let len = stop - start + 1;
+        let mut ret = ConstantValue::one_dim(len as usize);
+        for ndx in start..(stop+1) {
+            ret.value[(len - 1 - (ndx - start)) as usize] = self.value[mylen - 1 - (ndx as usize)];
+        }
+        ret
     }
 
     pub fn bitwise(&self, other: &ConstantValue, func: &Fn(Bit, &Bit) -> Bit) -> ConstantValue {
@@ -390,6 +403,11 @@ impl ConstantValue {
         BigInt::from_radix_be(self.signed,&binary,2).unwrap()
     }
 
+    pub fn as_bitvec(&self) -> Vec<Bit> {
+        assert_eq!(self.value.ndim(), 1);
+        self.value.iter().map(|x| x.clone()).collect::<Vec<Bit>>()
+    }
+
     pub fn flatten(&self) -> ConstantValue {
         let vec = self.value.iter()
             .map(|x| x.clone())
@@ -400,4 +418,34 @@ impl ConstantValue {
             signed: self.signed
         }
     }
+
+    pub fn negate(&self) -> ConstantValue {
+        ConstantValue::from_bigint(&(-self.as_int()))
+    }
+
+    pub fn left_shift(&self, count: usize) -> ConstantValue {
+        let mut vec = self.as_bitvec();
+        let trailing_zeros = std::iter::repeat(Bit::Zero).take(count);
+        vec.extend(trailing_zeros);
+        let value = ArrayD::<Bit>::from_shape_vec(vec![vec.len()], vec).unwrap();
+        ConstantValue {
+            value,
+            signed: self.signed,
+        }
+    }
+
+    pub fn right_shift(&self, count: usize) -> ConstantValue {
+        let bvec = self.as_bitvec();
+        let leading_zeros = std::iter::repeat(Bit::Zero).take(count);
+        let (a,_b) = bvec.split_at(bvec.len() - count);
+        let mut ret = vec![];
+        ret.extend(leading_zeros);
+        ret.extend_from_slice(a);
+        let value = ArrayD::<Bit>::from_shape_vec(vec![ret.len()], ret).unwrap();
+        ConstantValue {
+            value,
+            signed: Sign::Plus,
+        }
+    }
+
 }

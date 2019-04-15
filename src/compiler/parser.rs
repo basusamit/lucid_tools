@@ -197,7 +197,8 @@ impl Parser {
                     let t1 = self.exp(q)?;
                     let root = Box::from(Expression::InfixExpression {
                         lhs: t,
-                        operator: opr_save,
+                        operator_token: opr_save.clone(),
+                        operator: opr_save.as_infix_operator().unwrap(),
                         rhs: t1
                     });
                     t = root;
@@ -217,7 +218,8 @@ impl Parser {
             let operator = self.lexer.consume()?;
             let operand = self.exp(operator.precedence())?;
             return Ok(Box::from(Expression::PrefixExpression {
-                operator,
+                operator: operator.as_prefix_operator().unwrap(),
+                operator_token: operator,
                 operand,
             }));
         }
@@ -234,6 +236,9 @@ impl Parser {
             TokenKind::NUMBERDEC =>
                 Ok(Box::from(Expression::NumberExpression(
                     Number::DecimalNumber(self.lexer.consume()?)))),
+            TokenKind::NUMBER_STRING =>
+                Ok(Box::from(Expression::NumberExpression(
+                    Number::String(self.lexer.consume()?)))),
             TokenKind::IDENTIFIER => self.signal_expression(),
             TokenKind::LPAREN => self.group_expression(),
             TokenKind::LBRACE => self.array_expression(),

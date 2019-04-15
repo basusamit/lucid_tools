@@ -21,6 +21,25 @@ global baz {
    const unused_0 = $assert_eq(k8,1);
    const unused = $assert_eq($flatten(5),5);
    const unused_1 = $assert_eq( (3>1) ? 5 : 7, 5);
+   const gk = {8ha,8h0,8hd};
+   const gl = k1[0:3];
+   const unused_2 = $assert_eq(gl,4h5);
+   const gl1 = k1[0+:3];
+   const unused_3 = $assert_eq(gl1,3h5);
+   const gl2 = k1[3-:3];
+   const unused_4 = $assert_eq(gl2,3h2);
+   const unused_5 = $assert_eq(10h145 << 1, 11h28a);
+   const unused_6 = $assert_eq(10h145 >> 1, 10h0a2);
+   const unused_7 = $assert_eq(10h145 << 3, 13ha28);
+   const unused_8 = $assert_eq(10h145 >> 3, 10h28);
+
+
+/*   struct Energy {
+       red[8],
+       green[2],
+       blue
+   };
+   */
 }
 
 module foobar () {

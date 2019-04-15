@@ -220,8 +220,8 @@ impl<'a> PrettyWriteContext<'a> {
             ConcatenateExpression {expressions} => self.concatenate(expressions),
             DuplicateExpression {multiplier, base} => self.duplicate(multiplier,base),
             ArrayExpression {elements} => self.array(elements),
-            PrefixExpression {operator, operand} => self.prefix(operator, operand),
-            InfixExpression {lhs, operator, rhs} => self.infix(lhs, operator, rhs),
+            PrefixExpression {operator: _, operator_token, operand} => self.prefix(operator_token, operand),
+            InfixExpression {lhs, operator: _, operator_token, rhs} => self.infix(lhs, operator_token, rhs),
             TernaryExpression {selector, first, second} => self.ternary(selector, first, second),
         }
     }

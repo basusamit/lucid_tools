@@ -87,6 +87,43 @@ pub struct NamedBitSelector {
 pub type Signal = Vec<NamedBitSelector>;
 
 #[derive(Clone, Debug, PartialEq)]
+pub enum PrefixOperator {
+    Negate,
+    Or,
+    And,
+    Nand,
+    Nor,
+    Xor,
+    Xnor,
+    Not,
+    LogicalNot
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum InfixOperator {
+    Add,
+    Subtract,
+    Multiply,
+    Divide,
+    BitAND,
+    BitOR,
+    BitXOR,
+    BitXNOR,
+    LeftShift,
+    RightShift,
+    LeftSignedShift,
+    RightSignedShift,
+    GreaterThan,
+    GreaterEquals,
+    LessThan,
+    LessEquals,
+    Equals,
+    NotEquals,
+    LogicalAnd,
+    LogicalOr,
+}
+
+#[derive(Clone, Debug, PartialEq)]
 //expr
 //  ;
 pub enum Expression {
@@ -119,7 +156,8 @@ pub enum Expression {
     //  | ('|'|'&'|'~&'|'~|'|'^'|'~^') expr           #ExprCompress
     //  | ('~'|'!') expr                              #ExprInvert
     PrefixExpression {
-        operator: Token,
+        operator: PrefixOperator,
+        operator_token: Token,
         operand: Box<Expression>,
     },
     //  | expr ('*'|'/') expr                         #ExprMultDiv
@@ -130,10 +168,11 @@ pub enum Expression {
     //  | expr ('||'|'&&') expr                       #ExprLogical
     InfixExpression {
         lhs: Box<Expression>,
-        operator: Token,
+        operator: InfixOperator,
+        operator_token: Token,
         rhs: Box<Expression>,
     },
-    //  | expr '?' expr ':' expr                      #ExprTernary
+    //  | expr '?' expr ':' expr  #ExprTernary
     TernaryExpression {
         selector: Box<Expression>,
         first: Box<Expression>,

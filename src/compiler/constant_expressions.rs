@@ -219,39 +219,48 @@ impl<'a> ConstantExpressionContext<'a> {
         Ok(lhs.bitwise(rhs,func))
     }
 
-    fn infix(&self, lhs: &Expression, operator: &Token, rhs: &Expression) -> ConstantExpressionResult {
+    fn infix(&self, lhs: &Expression, operator: &InfixOperator, rhs: &Expression) -> ConstantExpressionResult {
         let lhs_value = self.constant_expression(lhs)?;
         let rhs_value = self.constant_expression(rhs)?;
-        match &operator.kind {
-            TokenKind::PLUS => self.binary_op(&lhs_value, &rhs_value, &std::ops::Add::add),
-            TokenKind::MINUS => self.binary_op(&lhs_value, &rhs_value, &std::ops::Sub::sub),
-            TokenKind::MULTIPLY => self.binary_op(&lhs_value, &rhs_value, &std::ops::Mul::mul),
-            TokenKind::DIVIDE => self.binary_op(&lhs_value, &rhs_value, &std::ops::Div::div),
-            TokenKind::GT => self.compare_op(&lhs_value, &rhs_value, &|a,b| a>b),
-            TokenKind::GE => self.compare_op(&lhs_value, &rhs_value, &|a,b| a>=b),
-            TokenKind::EQ => self.compare_op(&lhs_value, &rhs_value, &|a,b| a==b),
-            TokenKind::LT => self.compare_op(&lhs_value, &rhs_value, &|a,b| a<b),
-            TokenKind::LE => self.compare_op(&lhs_value, &rhs_value, &|a,b| a<=b),
-            TokenKind::NEQ => self.compare_op(&lhs_value, &rhs_value, &|a, b|a!=b),
-            TokenKind::BITAND => self.bitwise_op(&lhs_value, &rhs_value, &bit_op_and),
-            TokenKind::BITOR => self.bitwise_op(&lhs_value, &rhs_value, &bit_op_or),
-            TokenKind::BITXNOR => self.bitwise_op(&lhs_value, &rhs_value, &bit_op_xnor),
-            TokenKind::BITXOR => self.bitwise_op(&lhs_value, &rhs_value, &bit_op_xor),
-            _ => Err(ProgramError::of("unsupported_operation", "infix operator is unsupported")),
+        match operator {
+            InfixOperator::Add => self.binary_op(&lhs_value, &rhs_value, &std::ops::Add::add),
+            InfixOperator::Subtract => self.binary_op(&lhs_value, &rhs_value, &std::ops::Sub::sub),
+            InfixOperator::Multiply => self.binary_op(&lhs_value, &rhs_value, &std::ops::Mul::mul),
+            InfixOperator::Divide => self.binary_op(&lhs_value, &rhs_value, &std::ops::Div::div),
+            InfixOperator::GreaterThan => self.compare_op(&lhs_value, &rhs_value, &|a, b| a > b),
+            InfixOperator::GreaterEquals => self.compare_op(&lhs_value, &rhs_value, &|a, b| a >= b),
+            InfixOperator::Equals => self.compare_op(&lhs_value, &rhs_value, &|a, b| a == b),
+            InfixOperator::LessThan => self.compare_op(&lhs_value, &rhs_value, &|a, b| a < b),
+            InfixOperator::LessEquals => self.compare_op(&lhs_value, &rhs_value, &|a, b| a <= b),
+            InfixOperator::NotEquals => self.compare_op(&lhs_value, &rhs_value, &|a, b| a != b),
+            InfixOperator::BitAND => self.bitwise_op(&lhs_value, &rhs_value, &bit_op_and),
+            InfixOperator::BitOR => self.bitwise_op(&lhs_value, &rhs_value, &bit_op_or),
+            InfixOperator::BitXNOR => self.bitwise_op(&lhs_value, &rhs_value, &bit_op_xnor),
+            InfixOperator::BitXOR => self.bitwise_op(&lhs_value, &rhs_value, &bit_op_xor),
+            InfixOperator::LeftShift => Ok(lhs_value.left_shift(rhs_value.as_int().to_usize().unwrap())),
+            InfixOperator::RightShift => Ok(lhs_value.right_shift(rhs_value.as_int().to_usize().unwrap())),
+            InfixOperator::LeftSignedShift => Ok(lhs_value.left_shift(rhs_value.as_int().to_usize().unwrap())),
+            InfixOperator::RightSignedShift => Ok(lhs_value.right_shift(rhs_value.as_int().to_usize().unwrap())),
+            InfixOperator::LogicalAnd => self.bitwise_op(&lhs_value.fold(Bit::Zero, &bit_op_or),
+                                                         &rhs_value.fold(Bit::Zero, &bit_op_or),
+                                                         &bit_op_and),
+            InfixOperator::LogicalOr => self.bitwise_op(&lhs_value.fold(Bit::Zero, &bit_op_or),
+                                                        &rhs_value.fold(Bit::Zero, &bit_op_or),
+                                                        &bit_op_or),
         }
     }
 
-    fn prefix(&self, operator: &Token, operand: &Expression) -> ConstantExpressionResult {
+    fn prefix(&self, operator: &PrefixOperator, operand: &Expression) -> ConstantExpressionResult {
         let op_value = self.constant_expression(operand)?;
-        match &operator.kind {
-            TokenKind::BITAND => Ok(op_value.fold(Bit::One,&bit_op_and)),
-            TokenKind::BITOR => Ok(op_value.fold(Bit::Zero, &bit_op_or)),
-            TokenKind::BITXOR => Ok(op_value.fold(Bit::Zero, &bit_op_xor)),
-            TokenKind::BITNOT => Ok(op_value.map(bit_op_not)),
-            TokenKind::BITNAND => Ok(op_value.fold(Bit::One, &bit_op_and).map(bit_op_not)),
-            TokenKind::BITNOR => Ok(op_value.fold(Bit::Zero, &bit_op_or).map(bit_op_not)),
-            TokenKind::BITXNOR => Ok(op_value.fold(Bit::Zero, &bit_op_xor).map(bit_op_not)),
-            _ => Err(ProgramError::of("unsupported_prefix", "prefix operator is unsupported")),
+        match operator {
+            PrefixOperator::And => Ok(op_value.fold(Bit::One,&bit_op_and)),
+            PrefixOperator::Or => Ok(op_value.fold(Bit::Zero, &bit_op_or)),
+            PrefixOperator::Xor => Ok(op_value.fold(Bit::Zero, &bit_op_xor)),
+            PrefixOperator::Not => Ok(op_value.map(bit_op_not)),
+            PrefixOperator::Nand => Ok(op_value.fold(Bit::One, &bit_op_and).map(bit_op_not)),
+            PrefixOperator::Nor | PrefixOperator::LogicalNot => Ok(op_value.fold(Bit::Zero, &bit_op_or).map(bit_op_not)),
+            PrefixOperator::Xnor => Ok(op_value.fold(Bit::Zero, &bit_op_xor).map(bit_op_not)),
+            PrefixOperator::Negate => Ok(op_value.negate()),
         }
     }
 
@@ -348,7 +357,36 @@ impl<'a> ConstantExpressionContext<'a> {
         Ok(cv)
     }
 
+    fn signal_apply_const_bit_selector(&self, base: &ConstantValue, start: &Expression, stop: &Expression) -> ConstantExpressionResult {
+        let mut cv = base.clone();
+        let start_val = self.constant_expression(start)?.as_int().to_u32().unwrap();
+        let stop_val = self.constant_expression(stop)?.as_int().to_u32().unwrap();
+        cv = cv.range(start_val, stop_val);
+        Ok(cv)
+    }
+
+    fn signal_apply_fixed_width(&self, base: &ConstantValue, start: &Expression, sign: &Token, width: &Expression) -> ConstantExpressionResult {
+        let mut cv = base.clone();
+        let start_val = self.constant_expression(start)?.as_int().to_u32().unwrap();
+        let width_val = self.constant_expression(width)?.as_int().to_u32().unwrap();
+        println!("{:?}", sign);
+        match sign.kind {
+            TokenKind::PLUSCOLON => cv = cv.range(start_val, start_val + width_val - 1),
+            TokenKind::NEGCOLON => cv = cv.range(start_val - width_val + 1, start_val),
+            _ => return Err(ProgramError::of("unknown fixed width selection type","blah")),
+        }
+        Ok(cv)
+    }
+
     fn signal_apply_bitselector(&self, base: &ConstantValue, select: &Option<BitSelector>) -> ConstantExpressionResult {
+        if let Some(bitselector) = select {
+            match bitselector {
+                BitSelector::ConstBitSelector {start, stop} =>
+                    return self.signal_apply_const_bit_selector(base, start, stop),
+                BitSelector::FixedWidthBitSelector {start, sign, width} =>
+                    return self.signal_apply_fixed_width(base, start, sign, width),
+            }
+        }
         Ok(base.clone())
     }
 
@@ -415,8 +453,8 @@ impl<'a> ConstantExpressionContext<'a> {
             SignalExpression(s) => self.signal(s),
             NumberExpression(n) => self.number(n),
             ExpressionGroup(g) => self.constant_expression(g),
-            InfixExpression {lhs, operator, rhs} => self.infix(lhs, operator, rhs),
-            PrefixExpression {operator, operand} => self.prefix(operator,operand),
+            InfixExpression {lhs, operator, operator_token: _, rhs} => self.infix(lhs, operator, rhs),
+            PrefixExpression {operator, operator_token: _, operand} => self.prefix(operator,operand),
             ArrayExpression {elements} => self.array(elements),
             DuplicateExpression {multiplier, base} => self.dup(multiplier, base),
             FunctionExpression {name, arguments} => self.function(name, arguments),

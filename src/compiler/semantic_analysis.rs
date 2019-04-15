@@ -76,7 +76,7 @@ impl<'a> SemanticAnalysisContext<'a> {
     fn define_symbol(&mut self, t: &Token, s: &SymbolKind) -> SemanticAnalysisResult {
         let ident = self.prefixed_name(&t.text(self.input));
         if self.symbols.contains_key(&ident) {
-            return Err(ProgramError::of("sema", "Symbol already defined"));
+            return Err(ProgramError::of("sema", &(String::from("Symbol already defined: ") + &ident)));
         }
         self.symbols.insert(ident, s.clone());
         Ok(())
@@ -248,7 +248,7 @@ impl<'a> SemanticAnalysisContext<'a> {
     }
 
     fn module(&mut self, m: &ModuleBlock) -> SemanticAnalysisResult {
-        self.define_symbol(&m.name, &SymbolKind::Module)?;
+        // self.define_symbol(&m.name, &SymbolKind::Module)?;
         self.parameter_declarations(&m.params)?;
         self.port_declarations(&m.ports)?;
         self.body(&m.body)
