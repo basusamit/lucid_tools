@@ -761,7 +761,11 @@ impl Parser {
         match self.lexer.next_token().kind {
             TokenKind::CONST => Ok(GlobalStatement::ConstantDeclaration(self.constant_statement()?)),
             TokenKind::STRUCT => Ok(GlobalStatement::StructureDeclaration(self.structure_declaration()?)),
-            _ => Err(ProgramError::of("global_statement", "Unrecognized global statement type"))
+            _ => {
+                let mut msg = String::new();
+                let _ = write!(msg, "Unrecognized global statement type: {:?}", self.lexer.next_token());
+                Err(ProgramError::of("global_statement", &msg))
+            }
         }
     }
 

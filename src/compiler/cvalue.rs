@@ -278,6 +278,11 @@ impl ConstantValue {
             signed: Sign::Plus,
         }
     }
+
+    pub fn is_empty(&self) -> bool {
+        return self.value.ndim() == 0;
+    }
+
     pub fn one_dim(count : usize) -> ConstantValue {
         ConstantValue {
             value: Array::zeros(vec![count]),

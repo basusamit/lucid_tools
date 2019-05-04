@@ -28,6 +28,7 @@ extern crate clap;
 use clap::App;
 use crate::compiler::semantic_analysis::{SemanticAnalysisContext, SymbolTable};
 use crate::compiler::constant_expressions::ConstantExpressionContext;
+use crate::compiler::size_analysis::SizeAnalysisContext;
 
 /// First, parse the command line to get the arguments
 fn main() {
@@ -56,5 +57,15 @@ fn main() {
         let mut const_analysis = ConstantExpressionContext::from(&contents, &mut symbol);
         const_analysis.source(&source).unwrap();
     }
-    println!("{:?}", symbol);
+    for (sym,val) in &symbol.symbols {
+        println!("{} {:?}", sym, val);
+    }
+    {
+        let mut size_analysis = SizeAnalysisContext::from(&contents, &mut symbol);
+        size_analysis.source(&source).unwrap();
+    }
+    for (sym,val) in &symbol.symbols {
+        println!("{} {:?}", sym, val);
+    }
+//    println!("{:?}", symbol);
 }

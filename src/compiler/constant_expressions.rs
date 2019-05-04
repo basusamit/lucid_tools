@@ -43,7 +43,6 @@ pub type ConstantExpressionResult = Result<ConstantValue, ProgramError>;
 pub struct ConstantExpressionContext<'a> {
     input: &'a str,
     symbols: &'a mut SymbolTable,
-    prefix: String,
 }
 
 fn split_token_at_base_spec(number_text: String, base_spec: char) -> (usize, Vec<u8>) {
@@ -100,7 +99,6 @@ impl<'a> ConstantExpressionContext<'a> {
         ConstantExpressionContext {
             input,
             symbols,
-            prefix: String::new(),
         }
     }
 
@@ -339,11 +337,11 @@ impl<'a> ConstantExpressionContext<'a> {
     }
 
     fn signal_base(&self, name: &String) -> ConstantExpressionResult {
-        let prefixed_name = self.prefixed_name(name);
+        let prefixed_name = self.symbols.prefixed_name(name);
         if let Some(SymbolKind::Constant(val)) = self.symbols.get(&prefixed_name) {
             return Ok(val.clone());
         } else {
-            return Err(ProgramError::of("No signal found", "constant not named"));
+            return Err(ProgramError::of("No signal found", &prefixed_name));
         }
     }
 
@@ -409,11 +407,22 @@ impl<'a> ConstantExpressionContext<'a> {
     //      no bit selectors allowed.
     fn signal(&self, s: &[NamedBitSelector]) -> ConstantExpressionResult {
         if s.len() == 0 {
-            return Err(ProgramError::of("Invalid signal expression", "Signal expresison is not valid"));
+            return Err(ProgramError::of("Invalid signal expression", "Signal expression is not valid"));
         }
         // Get the base value from the symbol table
-        let mut base = self.signal_base(&s[0].name.text(self.input))?;
-        base = self.signal_apply_selector(&base, &s[0].selector)?;
+        let mut signal_name = s[0].name.text(self.input).clone();
+        // Check for foo.bar
+        let mut selectors = &s[0].selector;
+        if s[0].selector.arrays.is_empty() && s.len() > 1 {
+            signal_name = signal_name + &"." + &s[1].name.text(self.input);
+            selectors = &s[1].selector;
+        }
+        let mut base = self.signal_base(&signal_name)?;
+        if base.is_empty() {
+            return Err(ProgramError::of("Symbol is not defined", &(String::from("Symbol used before definition:")
+            + &signal_name)));
+        }
+        base = self.signal_apply_selector(&base, selectors)?;
         Ok(base)
     }
 
@@ -448,7 +457,7 @@ impl<'a> ConstantExpressionContext<'a> {
     }
 
     pub fn constant_expression(&self, expr: &Expression) -> ConstantExpressionResult {
-        println!("{:?}", expr);
+        //println!("{:?}", expr);
         match expr {
             SignalExpression(s) => self.signal(s),
             NumberExpression(n) => self.number(n),
@@ -463,22 +472,43 @@ impl<'a> ConstantExpressionContext<'a> {
         }
     }
 
-    fn module(&mut self, _m: &ModuleBlock) -> SemanticAnalysisResult {
+    fn module(&mut self, m: &ModuleBlock) -> SemanticAnalysisResult {
+        self.symbols.prefix = m.name.text(self.input);
+        self.parameter_declarations(&m.params)?;
+        self.port_declarations(&m.ports)?;
+        self.body(&m.body)?;
+        self.symbols.prefix = String::new();
         Ok(())
     }
 
-
-    fn prefixed_name(& self, name: &String) -> String {
-        if self.prefix.len() == 0 {
-            name.clone()
-        } else {
-            self.prefix.clone() + "." + name
+    fn parameter_declarations(&mut self, params: &[ParameterDeclaration]) -> SemanticAnalysisResult {
+        if params.len() != 0 {
+            panic!("parameter declarations not implemented");
         }
+        Ok(())
+    }
+
+    fn port_declarations(&mut self, ports: &[PortDeclaration]) -> SemanticAnalysisResult {
+        Ok(())
+    }
+
+    fn body(&mut self, block: &[Statement]) -> SemanticAnalysisResult {
+        for x in block {
+            self.statement(x)?;
+        }
+        Ok(())
+    }
+
+    fn statement(&mut self, s: &Statement) -> SemanticAnalysisResult {
+        if let Statement::ConstantDeclaration(c) = s {
+            return self.constant_declaration(c);
+        }
+        Ok(())
     }
 
     fn constant_declaration(&mut self, c: &ConstantDeclaration) -> SemanticAnalysisResult {
         let value = self.constant_expression(&c.value)?;
-        let name = self.prefixed_name(&c.name.text(self.input));
+        let name = self.symbols.prefixed_name(&c.name.text(self.input));
         self.symbols.insert(name, SymbolKind::Constant(value).clone());
         Ok(())
     }
@@ -491,11 +521,11 @@ impl<'a> ConstantExpressionContext<'a> {
     }
 
     fn global(&mut self, g: &GlobalBlock) -> SemanticAnalysisResult{
-        self.prefix = g.name.text(self.input);
+        self.symbols.prefix = g.name.text(self.input);
         for x in &g.statements {
             self.global_statement(x)?;
         }
-        self.prefix = String::new();
+        self.symbols.prefix = String::new();
         Ok(())
     }
 

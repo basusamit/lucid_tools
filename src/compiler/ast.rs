@@ -206,7 +206,7 @@ pub struct PortDeclaration {
     pub direction: Token,
     pub kind: Option<StructureType>,
     pub name: Token,
-    pub sizes: Vec<Box<Expression>>,
+    pub sizes: ArraySizes,
 }
 
 // con_list  : connection (',' connection)*;
@@ -235,7 +235,7 @@ pub type InstanceConnections = Vec<Connection>;
 pub struct StructMember {
     pub name: Token,
     pub kind: Option<StructureType>,
-    pub sizes: Vec<Box<Expression>>
+    pub sizes: ArraySizes
 }
 
 // array_size: '[' expr ']';

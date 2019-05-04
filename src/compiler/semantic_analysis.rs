@@ -36,30 +36,101 @@ pub struct FSMDetails {
     states: Vec<String>,
 }
 
+// Describe the shape of a quantity (signal,  DFF, etc)
+// Every register is an array of base types.  The base
+// type can be either a struct or a bit.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Shape {
+    pub kind: Option<String>, // The kind is none for bits
+    pub dimensions: Vec<usize>, // The size of the array
+}
+
+impl Shape {
+    pub fn empty() -> Shape {
+        Shape {
+            kind: None,
+            dimensions: vec![],
+        }
+    }
+
+    pub fn from_kind(kind: Option<String>) -> Shape {
+        Shape {
+            kind,
+            dimensions: vec![],
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct StructDetail {
+    pub field: String,
+    pub shape: Shape,
+}
+
+type StructDetails = Vec<StructDetail>;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum SymbolKind {
     Constant(ConstantValue),
     Parameter,
-    Input,
-    Output,
-    InOut,
+    Input(Shape),
+    Output(Shape),
+    InOut(Shape),
     FSM(FSMDetails),
-    DFF(TypeDetails),
+    DFF(Shape),
     ModuleInstance,
     Variable,
-    Struct,
-    Signal(TypeDetails),
+    Struct(StructDetails),
+    Signal(Shape),
     Module,
     Global,
 }
 
-pub type SymbolTable = HashMap<String, SymbolKind>;
+pub struct SymbolTable {
+    pub symbols: HashMap<String, SymbolKind>,
+    pub prefix: String,
+}
+
+impl SymbolTable {
+    pub fn new() -> SymbolTable {
+        SymbolTable {
+            symbols: HashMap::<String, SymbolKind>::new(),
+            prefix: String::new(),
+        }
+    }
+
+    pub fn contains_key(&self, key: &str) -> bool {
+        self.symbols.contains_key(key)
+    }
+
+    pub fn insert(&mut self, key: String, value: SymbolKind) {
+        self.symbols.insert(key, value);
+    }
+
+    pub fn prefixed_name(&self, name: &String) -> String {
+        if self.prefix.len() == 0 {
+            name.clone()
+        } else if name.contains(".") {
+            name.clone()
+        } else {
+            self.prefix.clone() + "." + name
+        }
+    }
+
+    pub fn get(&self, name: &String) -> Option<&SymbolKind> {
+        self.symbols.get(name)
+    }
+
+    pub fn get_mut(&mut self, name: &String) -> Option<& mut SymbolKind> {
+        self.symbols.get_mut(name)
+    }
+}
+
+//pub type SymbolTable = HashMap<String, SymbolKind>;
 
 pub struct SemanticAnalysisContext<'a> {
     input: &'a str,
     symbols: &'a mut SymbolTable,
-    prefix: String,
 }
 
 pub type SemanticAnalysisResult = Result<(), ProgramError>;
@@ -69,12 +140,11 @@ impl<'a> SemanticAnalysisContext<'a> {
         SemanticAnalysisContext {
             input,
             symbols,
-            prefix: String::new(),
         }
     }
 
     fn define_symbol(&mut self, t: &Token, s: &SymbolKind) -> SemanticAnalysisResult {
-        let ident = self.prefixed_name(&t.text(self.input));
+        let ident = self.symbols.prefixed_name(&t.text(self.input));
         if self.symbols.contains_key(&ident) {
             return Err(ProgramError::of("sema", &(String::from("Symbol already defined: ") + &ident)));
         }
@@ -88,17 +158,15 @@ impl<'a> SemanticAnalysisContext<'a> {
     }
 
     fn structure_declaration(&mut self, s: &StructureDeclaration) -> SemanticAnalysisResult {
-        self.define_symbol(&s.name, &SymbolKind::Struct)?;
-        // TODO - handle fields of the struct?
-        Ok(())
-    }
-
-    fn prefixed_name(& self, name: &String) -> String {
-        if self.prefix.len() == 0 {
-            name.clone()
-        } else {
-            self.prefix.clone() + "." + name
+        let mut p = vec![];
+        for x in &s.members {
+            let mut shape = Shape::empty();
+            shape.kind = self.map_struct_type(&x.kind)?;
+            let mut detail = StructDetail { field: x.name.text(self.input), shape};
+            p.push(detail);
         }
+        self.define_symbol(&s.name, &SymbolKind::Struct(p));
+        Ok(())
     }
 
     fn constant_declaration(&mut self, c: &ConstantDeclaration) -> SemanticAnalysisResult {
@@ -143,27 +211,29 @@ impl<'a> SemanticAnalysisContext<'a> {
     fn signal_declaration(&mut self, s: &SignalDeclaration) -> SemanticAnalysisResult {
         let struct_kind = self.map_struct_type(&s.kind)?;
         for x in &s.vars {
-            self.define_symbol(&x.name, &SymbolKind::Signal(TypeDetails {
-                kind: struct_kind.clone()
+            self.define_symbol(&x.name, &SymbolKind::Signal(Shape {
+                kind: struct_kind.clone(),
+                dimensions: vec![],
             }))?;
         }
         Ok(())
     }
 
     fn fsm_declaration(&mut self, f: &FSMDeclaration) -> SemanticAnalysisResult {
-        let mut states = vec![];
-        for x in &f.states {
-            states.push(x.text(self.input));
-        }
+        let states = f.states.iter()
+            .map(|x| x.text(self.input)).collect::<Vec<String>>();
         self.define_symbol(&f.name, &SymbolKind::FSM(FSMDetails { states }))
     }
 
     fn dff_declaration(&mut self, d: &DFFDeclaration) -> SemanticAnalysisResult {
         let struct_kind = self.map_struct_type(&d.kind)?;
         for x in &d.dffs {
-            self.define_symbol(&x.name, &SymbolKind::DFF(TypeDetails {
-                kind: struct_kind.clone()
-            }))?
+            self.define_symbol(&x.name, &SymbolKind::DFF(
+                Shape {
+                    kind: struct_kind.clone(),
+                    dimensions: vec![],
+                }
+            ))?
         }
         Ok(())
     }
@@ -220,11 +290,13 @@ impl<'a> SemanticAnalysisContext<'a> {
         Ok(())
     }
 
+
     fn port_declaration(&mut self, p: &PortDeclaration) -> SemanticAnalysisResult {
+        let port_kind = self.map_struct_type(&p.kind)?;
         match p.direction.kind {
-            TokenKind::INPUT => self.define_symbol(&p.name, &SymbolKind::Input),
-            TokenKind::OUTPUT => self.define_symbol(&p.name, &SymbolKind::Output),
-            TokenKind::INOUT => self.define_symbol(&p.name, &SymbolKind::InOut),
+            TokenKind::INPUT => self.define_symbol(&p.name, &SymbolKind::Input(Shape::from_kind(port_kind))),
+            TokenKind::OUTPUT => self.define_symbol(&p.name, &SymbolKind::Output(Shape::from_kind(port_kind))),
+            TokenKind::INOUT => self.define_symbol(&p.name, &SymbolKind::InOut(Shape::from_kind(port_kind))),
             _ => Err(ProgramError::of("portdeclaration", "Unexpected type for port"))
         }
     }
@@ -248,17 +320,19 @@ impl<'a> SemanticAnalysisContext<'a> {
     }
 
     fn module(&mut self, m: &ModuleBlock) -> SemanticAnalysisResult {
-        // self.define_symbol(&m.name, &SymbolKind::Module)?;
+        self.symbols.prefix = m.name.text(self.input);
         self.parameter_declarations(&m.params)?;
         self.port_declarations(&m.ports)?;
-        self.body(&m.body)
+        self.body(&m.body)?;
+        self.symbols.prefix = String::new();
+        Ok(())
     }
 
     fn global(&mut self, g: &GlobalBlock) -> SemanticAnalysisResult {
         self.define_symbol(&g.name, &SymbolKind::Global)?;
-        self.prefix = g.name.text(self.input);
+        self.symbols.prefix = g.name.text(self.input);
         self.global_statements(&g.statements)?;
-        self.prefix = String::new();
+        self.symbols.prefix = String::new();
         Ok(())
     }
 
