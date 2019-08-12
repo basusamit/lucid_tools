@@ -43,6 +43,7 @@ pub struct FSMDetails {
 pub struct Shape {
     pub kind: Option<String>, // The kind is none for bits
     pub dimensions: Vec<usize>, // The size of the array
+    pub bitwidth: usize, // The number of bits in this object
 }
 
 impl Shape {
@@ -50,6 +51,7 @@ impl Shape {
         Shape {
             kind: None,
             dimensions: vec![],
+            bitwidth: 0,
         }
     }
 
@@ -57,6 +59,7 @@ impl Shape {
         Shape {
             kind,
             dimensions: vec![],
+            bitwidth: 0,
         }
     }
 }
@@ -67,7 +70,11 @@ pub struct StructDetail {
     pub shape: Shape,
 }
 
-type StructDetails = Vec<StructDetail>;
+#[derive(Clone, Debug, PartialEq)]
+pub struct StructDetails {
+    pub fields: Vec<StructDetail>,
+    pub bitwidth: usize,
+}
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum SymbolKind {
@@ -165,7 +172,11 @@ impl<'a> SemanticAnalysisContext<'a> {
             let mut detail = StructDetail { field: x.name.text(self.input), shape};
             p.push(detail);
         }
-        self.define_symbol(&s.name, &SymbolKind::Struct(p));
+        let q = StructDetails {
+            fields: p,
+            bitwidth: 0,
+        };
+        self.define_symbol(&s.name, &SymbolKind::Struct(q));
         Ok(())
     }
 
@@ -214,6 +225,7 @@ impl<'a> SemanticAnalysisContext<'a> {
             self.define_symbol(&x.name, &SymbolKind::Signal(Shape {
                 kind: struct_kind.clone(),
                 dimensions: vec![],
+                bitwidth: 0,
             }))?;
         }
         Ok(())
@@ -232,6 +244,7 @@ impl<'a> SemanticAnalysisContext<'a> {
                 Shape {
                     kind: struct_kind.clone(),
                     dimensions: vec![],
+                    bitwidth: 0,
                 }
             ))?
         }

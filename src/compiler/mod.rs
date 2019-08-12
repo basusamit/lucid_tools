@@ -30,3 +30,4 @@ pub mod cvalue;
 pub mod semantic_analysis;
 pub mod constant_expressions;
 pub mod size_analysis;
+pub mod width_analysis;

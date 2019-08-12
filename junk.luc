@@ -1,0 +1,14 @@
+module decoder
+    #(
+        WIDTH : WIDTH>0
+    )
+    (
+        input in[WIDTH],
+        output out[c{ 1,WIDTH x{ 1b0 } }]
+    )
+    {
+        always {
+            out = 0;
+            out[in] = 1;
+        }
+    }

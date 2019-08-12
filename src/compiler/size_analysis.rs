@@ -111,7 +111,7 @@ impl<'a> SizeAnalysisContext<'a> {
         let field_name = field.name.text(self.input);
         println!("Sizing field {} of struct {} as {:?}", field_name, struct_name, size_vec);
         if let SymbolKind::Struct(details) = info {
-            for field_detail in details {
+            for field_detail in &mut details.fields {
                 if field_detail.field == field.name.text(self.input) {
                     field_detail.shape.dimensions = size_vec.clone();
                 }

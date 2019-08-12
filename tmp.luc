@@ -1,0 +1,25 @@
+global baz{
+    const y = (3*(6123+412)-71)/2<5;
+    
+    const Qz = 5;
+    
+    const Qh = {{5,5},{4,6},{4,7}};
+    
+    const gb = 3 x{ 5 };
+    
+    const gt = 2 x{ {{4},{4},{5}} };
+    
+    const gs = {4,4,5};
+    
+    const x = Qz+5;
+}
+
+module foobar
+    (
+        
+    )
+    {
+        const x = 32;
+        
+        const y = x+64;
+    }
