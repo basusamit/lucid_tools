@@ -64,7 +64,7 @@ impl<'a> WidthAnalysisContext<'a> {
         if !self.symbols.contains_key(&ident) {
             return Err(ProgramError::of("size", &(String::from("Symbol not found: ") + &ident)));
         }
-        let mut symbol = self.symbols.get_mut(&ident).unwrap();
+        let symbol = self.symbols.get_mut(&ident).unwrap();
         match symbol {
             SymbolKind::Input(s) |
             SymbolKind::Output(s) |
@@ -91,13 +91,17 @@ impl<'a> WidthAnalysisContext<'a> {
 
     fn structure_declaration(&mut self, s: &StructureDeclaration) -> WidthAnalysisResult {
         let ident = self.symbols.prefixed_name(&s.name.text(self.input));
-        if let Some(SymbolKind::Struct(details)) = self.symbols.get_mut(&ident) {
-            let mut total_bits = 0usize;
+        let mut total_bits = 0usize;
+        if let Some(SymbolKind::Struct(details)) = self.symbols.get(&ident) {
+            //let mut total_bits = 0usize;
             for x in &details.fields {
-                total_bits += self.shape(&x.shape);
+                total_bits = total_bits + self.shape(&x.shape).unwrap();
             }
+//            details.bitwidth = total_bits;
+        }
+        if let Some(SymbolKind::Struct(details)) = self.symbols.get_mut(&ident) {
             details.bitwidth = total_bits;
-            OK(())
+            Ok(())
         } else {
             Err(ProgramError::of("struct_decl", "Name mismatch in symbol table"))
         }
@@ -106,7 +110,7 @@ impl<'a> WidthAnalysisContext<'a> {
     fn global_statement(&mut self, s: &GlobalStatement) -> WidthAnalysisResult {
         match s {
             GlobalStatement::StructureDeclaration(s) => self.structure_declaration(s),
-            GlobalStatement::ConstantDeclaration(c) => Ok(()),
+            GlobalStatement::ConstantDeclaration(_c) => Ok(()),
         }
     }
 

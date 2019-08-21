@@ -33,18 +33,23 @@ global baz {
    const unused_7 = $assert_eq(10h145 << 3, 13ha28);
    const unused_8 = $assert_eq(10h145 >> 3, 10h28);
 
-/*   struct Energy {
+   struct Energy {
        red[8],
        green[2],
        blue
-   };
-   */
+   }
+   
    struct outstuff {
       color[Qz]
    }
 }
 
-module foobar (input clk, input rst[4], input<baz.outstuff> timing, output<baz.outstuff> adjusted[baz.Qz]) {
+module foobar
+#(
+DATA_WIDTH = 8,
+BASE_ADDR = 32hfffffff0
+)
+(input clk, input rst[4], input<baz.outstuff> timing, output<baz.outstuff> adjusted[baz.Qz]) {
    const x = 32;
    const y = x + 64;
 

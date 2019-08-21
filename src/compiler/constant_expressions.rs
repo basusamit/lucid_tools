@@ -139,7 +139,7 @@ impl<'a> ConstantExpressionContext<'a> {
         for x in number_data.iter() {
             match *x as char {
                 // These bit patterns are LSB first
-                '0' ... '9' | 'A' ... 'F' | 'a' ... 'f' =>
+                '0' ..= '9' | 'A' ..= 'F' | 'a' ..= 'f' =>
                     data_bits.extend_from_slice(&hex_digit_to_bit_pattern(*x as char)),
                 'X' | 'x' => { data_bits.extend_from_slice(&[Bit::DontCare, Bit::DontCare, Bit::DontCare, Bit::DontCare]); },
                 'Z' | 'z' => { data_bits.extend_from_slice(&[Bit::HiZ, Bit::HiZ, Bit::HiZ, Bit::HiZ]); },
@@ -191,7 +191,7 @@ impl<'a> ConstantExpressionContext<'a> {
         }
     }
 
-    fn binary_op(&self, lhs: &ConstantValue, rhs: &ConstantValue, func: &Fn(BigInt,BigInt)->BigInt) -> ConstantExpressionResult {
+    fn binary_op(&self, lhs: &ConstantValue, rhs: &ConstantValue, func: &dyn Fn(BigInt, BigInt) -> BigInt) -> ConstantExpressionResult {
         if !lhs.is_number() || !rhs.is_number() {
             return Err(ProgramError::of("dimension test","Can only add arrays that are 1-dimensional (numbers)"));
         }
@@ -201,7 +201,7 @@ impl<'a> ConstantExpressionContext<'a> {
         Ok(ConstantValue::from_bigint(&result))
     }
 
-    fn compare_op(&self, lhs: &ConstantValue, rhs: &ConstantValue, func: &Fn(BigInt,BigInt)->bool) -> ConstantExpressionResult {
+    fn compare_op(&self, lhs: &ConstantValue, rhs: &ConstantValue, func: &dyn Fn(BigInt, BigInt) -> bool) -> ConstantExpressionResult {
         if !lhs.is_number() || !rhs.is_number() {
             return Err(ProgramError::of("dimension test", "Can only compare arrays that are 1-dimensional (numbers)"));
         }
@@ -210,7 +210,7 @@ impl<'a> ConstantExpressionContext<'a> {
         Ok(ConstantValue::from_bool(func(lhs_val, rhs_val)))
     }
 
-    fn bitwise_op(&self, lhs: &ConstantValue, rhs: &ConstantValue, func: &Fn(Bit, &Bit) -> Bit) -> ConstantExpressionResult {
+    fn bitwise_op(&self, lhs: &ConstantValue, rhs: &ConstantValue, func: &dyn Fn(Bit, &Bit) -> Bit) -> ConstantExpressionResult {
         if lhs.value.shape() != rhs.value.shape() {
             return Err(ProgramError::of("shape mismatch", "Can only apply bitwise operators to arrays of the same dimensional size"));
         }
@@ -481,14 +481,23 @@ impl<'a> ConstantExpressionContext<'a> {
         Ok(())
     }
 
-    fn parameter_declarations(&mut self, params: &[ParameterDeclaration]) -> SemanticAnalysisResult {
-        if params.len() != 0 {
-            panic!("parameter declarations not implemented");
+    fn parameter_declaration(&mut self, param: &ParameterDeclaration) -> SemanticAnalysisResult {
+        if let Some(e) = &param.initial {
+            let initial = self.constant_expression(e)?;
+            let name = self.symbols.prefixed_name(&param.name.text(self.input));
+            self.symbols.insert(name, SymbolKind::Constant(initial).clone());
         }
         Ok(())
     }
 
-    fn port_declarations(&mut self, ports: &[PortDeclaration]) -> SemanticAnalysisResult {
+    fn parameter_declarations(&mut self, params: &[ParameterDeclaration]) -> SemanticAnalysisResult {
+        for x in params {
+            self.parameter_declaration(x)?;
+        }
+        Ok(())
+    }
+
+    fn port_declarations(&mut self, _ports: &[PortDeclaration]) -> SemanticAnalysisResult {
         Ok(())
     }
 

@@ -105,7 +105,7 @@ impl<'a> SizeAnalysisContext<'a> {
     }
 
     fn structure_field(&mut self, struct_name: &String, field: &StructMember) -> SizeAnalysisResult {
-        let context = ConstantExpressionContext::from(self.input, self.symbols);
+        //let context = ConstantExpressionContext::from(self.input, self.symbols);
         let size_vec = self.map_sizes_to_vec(&field.sizes)?;
         let info = self.symbols.get_mut(struct_name).unwrap();
         let field_name = field.name.text(self.input);
@@ -183,9 +183,7 @@ impl<'a> SizeAnalysisContext<'a> {
     }
 
     fn parameter_declarations(&mut self, p: &[ParameterDeclaration]) -> SizeAnalysisResult {
-        if p.len() != 0 {
-            panic!("Parameter declarations not handled yet");
-        }
+        // Parameters cannot be sized (i.e., arrays)
         Ok(())
     }
 
@@ -210,7 +208,24 @@ impl<'a> SizeAnalysisContext<'a> {
         Ok(())
     }
 
+    fn global_statement(&mut self, s: &GlobalStatement) -> SizeAnalysisResult {
+        match s {
+            GlobalStatement::StructureDeclaration(s) => self.structure_declaration(s),
+            GlobalStatement::ConstantDeclaration(c) => Ok(()),
+        }
+    }
+
+    fn global_statements(&mut self, block: &[GlobalStatement]) -> SizeAnalysisResult {
+        for x in block {
+            self.global_statement(x)?;
+        }
+        Ok(())
+    }
+
     fn global(&mut self, g: &GlobalBlock) -> SizeAnalysisResult {
+        self.symbols.prefix = g.name.text(self.input);
+        self.global_statements(&g.statements)?;
+        self.symbols.prefix = String::new();
         Ok(())
     }
 

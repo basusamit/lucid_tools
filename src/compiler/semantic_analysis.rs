@@ -20,7 +20,7 @@
 //OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 //SOFTWARE.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, BTreeMap};
 use super::ast::*;
 use super::token::*;
 use super::error::ProgramError;
@@ -94,14 +94,14 @@ pub enum SymbolKind {
 }
 
 pub struct SymbolTable {
-    pub symbols: HashMap<String, SymbolKind>,
+    pub symbols: BTreeMap<String, SymbolKind>,
     pub prefix: String,
 }
 
 impl SymbolTable {
     pub fn new() -> SymbolTable {
         SymbolTable {
-            symbols: HashMap::<String, SymbolKind>::new(),
+            symbols: BTreeMap::<String, SymbolKind>::new(),
             prefix: String::new(),
         }
     }
@@ -169,7 +169,7 @@ impl<'a> SemanticAnalysisContext<'a> {
         for x in &s.members {
             let mut shape = Shape::empty();
             shape.kind = self.map_struct_type(&x.kind)?;
-            let mut detail = StructDetail { field: x.name.text(self.input), shape};
+            let detail = StructDetail { field: x.name.text(self.input), shape};
             p.push(detail);
         }
         let q = StructDetails {

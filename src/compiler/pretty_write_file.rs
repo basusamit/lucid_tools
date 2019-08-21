@@ -37,7 +37,7 @@ pub struct PrettyWriteContext<'a> {
     line: String,
 }
 
-pub type PrettyWriteError = Result<(), Error>;
+pub type PrettyWriteError = Result<(), dyn Error>;
 
 impl<'a> PrettyWriteContext<'a> {
     pub fn from(input: &'a str, file: &'a File) -> PrettyWriteContext<'a> {

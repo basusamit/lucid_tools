@@ -363,7 +363,7 @@ impl ConstantValue {
         ret
     }
 
-    pub fn bitwise(&self, other: &ConstantValue, func: &Fn(Bit, &Bit) -> Bit) -> ConstantValue {
+    pub fn bitwise(&self, other: &ConstantValue, func: &dyn Fn(Bit, &Bit) -> Bit) -> ConstantValue {
         let mut res = ArrayD::<Bit>::zeros(self.value.dim());
         Zip::from(&mut res).and(&self.value).and(&other.value).apply(|a, b, c| {
             *a = func(*b,&c);
@@ -381,7 +381,7 @@ impl ConstantValue {
         }
     }
 
-    pub fn fold(&self, init: Bit, func: &Fn(Bit, &Bit) -> Bit) -> ConstantValue {
+    pub fn fold(&self, init: Bit, func: &dyn Fn(Bit, &Bit) -> Bit) -> ConstantValue {
         let res = self.value.fold(init, func);
         ConstantValue::from_bit(&res)
     }

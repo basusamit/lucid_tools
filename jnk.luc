@@ -3,6 +3,8 @@ global baz{
     
     const Qz = 5;
     
+    const x = Qz+5;
+    
     const Qh = {{5,5},{4,6},{4,7}};
     
     const gb = 3 x{ 5 };
@@ -10,8 +12,6 @@ global baz{
     const gt = 2 x{ {{4},{4},{5}} };
     
     const gs = {4,4,5};
-    
-    const x = Qz+5;
     
     const j = $flatten(gs);
     
@@ -64,14 +64,56 @@ global baz{
     const unused_7 = $assert_eq(10h145<<3,13ha28);
     
     const unused_8 = $assert_eq(10h145>>3,10h28);
+    
+    struct Energy{
+        red [8];
+        green [2];
+    blue }
+    
+    struct outstuff{
+    color [Qz]}
 }
 
 module foobar
+    #(
+        DATA_WIDTH = 8,
+        BASE_ADDR = 32hfffffff0
+    )
     (
-        
+        input clk,
+        input rst[4],
+        input<baz.outstuff> timing,
+        output<baz.outstuff> adjusted[baz.Qz]
     )
     {
         const x = 32;
         
         const y = x+64;
+        
+        dff blah[3][2][4];
+        
+        dff bazo[y][x];
+        
+        const red_bits = 8;
+        
+        const green_bits = 2;
+        
+        const blue_bits = 3;
+        
+        const color_count = 6;
+        
+        struct Energy{
+            red [red_bits];
+            green [green_bits];
+        blue [blue_bits]}
+        
+        dff <Energy>energy;
+        
+        struct Complex{
+            color <Energy>[color_count][color_count*2];
+        depth <Energy>}
+        
+        dff <Complex>meat;
+        
+        sig <Complex>meat2[color_count];
     }
