@@ -29,7 +29,7 @@ use clap::App;
 use crate::compiler::semantic_analysis::{SemanticAnalysisContext, SymbolTable};
 use crate::compiler::constant_expressions::ConstantExpressionContext;
 use crate::compiler::size_analysis::SizeAnalysisContext;
-use crate::compiler::width_analysis::WidthAnalysisContext;
+use crate::compiler::width_analysis::compute_bitwidths;
 
 /// First, parse the command line to get the arguments
 fn main() {
@@ -68,11 +68,13 @@ fn main() {
     for (sym,val) in &symbol.symbols {
         println!("{} {:?}", sym, val);
     }
-    {
+/*    {
         let mut width_analysis = WidthAnalysisContext::from(&contents, &mut symbol);
         width_analysis.source(&source).unwrap();
-    }
-    for (sym,val) in &symbol.symbols {
+    } */
+    let symbols_with_widths = compute_bitwidths(&symbol);
+    let symbols_with_widths_pass2 = compute_bitwidths(&symbols_with_widths);
+    for (sym,val) in &symbols_with_widths.symbols {
         println!("{} {:?}", sym, val);
     }
 //    println!("{:?}", symbol);

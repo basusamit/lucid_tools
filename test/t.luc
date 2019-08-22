@@ -33,11 +33,11 @@ global baz {
    const unused_7 = $assert_eq(10h145 << 3, 13ha28);
    const unused_8 = $assert_eq(10h145 >> 3, 10h28);
 
-   struct Energy {
+   struct EnergyGlobal {
        red[8],
        green[2],
        blue
-   }
+   } 
    
    struct outstuff {
       color[Qz]
@@ -76,5 +76,5 @@ BASE_ADDR = 32hfffffff0
 
    dff<Complex> meat;
 
-   sig<Complex> meat2[color_count];
+   sig<Complex> meat2[color_count][green_bits];
 }

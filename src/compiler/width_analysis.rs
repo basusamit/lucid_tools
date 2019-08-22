@@ -28,142 +28,75 @@ use crate::compiler::error::ProgramError;
 use crate::compiler::ast::*;
 use crate::compiler::token::Token;
 
-pub struct WidthAnalysisContext<'a> {
-    input: &'a str,
-    symbols: &'a mut SymbolTable,
-}
-
 pub type WidthAnalysisResult = Result<(), ProgramError>;
 
-impl<'a> WidthAnalysisContext<'a> {
-    pub fn from (input: &'a str, symbols: &'a mut SymbolTable) -> WidthAnalysisContext<'a> {
-        WidthAnalysisContext {
-            input,
-            symbols,
-        }
+fn get_sized_shape(symbols: &SymbolTable, shape: &Shape) -> Result<Shape, ProgramError> {
+    let mut ret = shape.clone();
+    let mut base_size = 1usize;
+    if let Some(kind) = &shape.kind {
+        base_size = get_symbol_size(kind, symbols)?;
     }
+    ret.elementsize = base_size;
+    ret.bitwidth = compute_sizes(&shape.dimensions) * base_size;
+    Ok(ret)
+}
 
-    fn get_symbol_size(&self, t: &String) -> Result<usize, ProgramError> {
-        let ident = self.symbols.prefixed_name(t);
-        if !self.symbols.contains_key(&ident) {
-            return Err(ProgramError::of("size", &(String::from("Symbol not found: ") + &ident)));
-        }
-        match self.symbols.get(&ident).unwrap() {
+fn compute_sizes(array: &[usize]) -> usize {
+    array.iter().fold(1usize, |accum, x| accum * x)
+}
+
+fn get_struct_total_size(s: &StructDetails, symbols: &SymbolTable) -> Result<usize, ProgramError> {
+    let mut total_bits = 0usize;
+    for x in &s.fields {
+        let sized_shape = get_sized_shape(symbols, &x.shape)?;
+        total_bits = total_bits + sized_shape.bitwidth;
+    }
+    Ok(total_bits)
+}
+
+fn get_symbol_size(kind: &String, symbols: &SymbolTable) -> Result<usize, ProgramError> {
+    if !symbols.contains_key(kind) {
+        return Err(ProgramError::of("get_symbol_size", &(String::from("Symbol not found: " ) + &kind)));
+    }
+    match symbols.get(&kind).unwrap() {
+        SymbolKind::Input(s) |
+        SymbolKind::Output(s) |
+        SymbolKind::InOut(s) |
+        SymbolKind::DFF(s) |
+        SymbolKind::Signal(s) => Ok(get_sized_shape(symbols, s).unwrap().bitwidth),
+        SymbolKind::Struct(s) => get_struct_total_size(s, symbols),
+        _ => unimplemented!("Symbol not covered"),
+    }
+}
+
+fn size_struct(details: &mut StructDetails, symbols: &SymbolTable) -> Result<(), ProgramError> {
+    let mut total_bits = 0usize;
+    for x in &mut details.fields {
+        let sized_shape = get_sized_shape(symbols, &x.shape)?;
+        x.shape.bitwidth = sized_shape.bitwidth;
+        x.shape.bitoffset = total_bits;
+        x.shape.elementsize = sized_shape.elementsize;
+        total_bits = total_bits + x.shape.bitwidth;
+    }
+    details.bitwidth = total_bits;
+    Ok(())
+}
+
+pub fn compute_bitwidths(symbols: &SymbolTable) -> SymbolTable {
+    let mut ret = SymbolTable::new();
+    for symbol in &symbols.symbols {
+        println!("Symbol: {}", symbol.0);
+        let mut kind = symbol.1.clone();
+        match &mut kind {
             SymbolKind::Input(s) |
             SymbolKind::Output(s) |
             SymbolKind::InOut(s) |
             SymbolKind::DFF(s) |
-            SymbolKind::Signal(s) => Ok(s.bitwidth),
-            SymbolKind::Struct(s) => Ok(s.bitwidth),
-            _ => Err(ProgramError::of("symbol", "Unsupported symbol type")),
+            SymbolKind::Signal(s) => s.clone_from(&get_sized_shape(symbols, &s).unwrap()),
+            SymbolKind::Struct(s) => size_struct(s, symbols).unwrap(),
+            _ => {},
         }
+        ret.insert(symbol.0.clone(), kind);
     }
-
-    fn define_symbol_size(&mut self, t: &Token, bits: usize) -> WidthAnalysisResult {
-        let ident = self.symbols.prefixed_name(&t.text(self.input));
-        if !self.symbols.contains_key(&ident) {
-            return Err(ProgramError::of("size", &(String::from("Symbol not found: ") + &ident)));
-        }
-        let symbol = self.symbols.get_mut(&ident).unwrap();
-        match symbol {
-            SymbolKind::Input(s) |
-            SymbolKind::Output(s) |
-            SymbolKind::InOut(s) |
-            SymbolKind::DFF(s) |
-            SymbolKind::Signal(s) => s.bitwidth = bits,
-            SymbolKind::Struct(s) => s.bitwidth = bits,
-            _ => return Err(ProgramError::of("symbol", "Unknown symbol type")),
-        }
-        Ok(())
-    }
-
-    fn compute_sizes(&self, array: &[usize]) -> usize {
-        array.iter().fold(1usize, |accum, x| accum * x)
-    }
-
-    fn shape(&self, shape: &Shape) -> Result<usize, ProgramError> {
-        let mut base_size = 1usize;
-        if let Some(kind) = &shape.kind {
-            base_size = self.get_symbol_size(kind)?;
-        }
-        Ok(self.compute_sizes(&shape.dimensions) * base_size)
-    }
-
-    fn structure_declaration(&mut self, s: &StructureDeclaration) -> WidthAnalysisResult {
-        let ident = self.symbols.prefixed_name(&s.name.text(self.input));
-        let mut total_bits = 0usize;
-        if let Some(SymbolKind::Struct(details)) = self.symbols.get(&ident) {
-            //let mut total_bits = 0usize;
-            for x in &details.fields {
-                total_bits = total_bits + self.shape(&x.shape).unwrap();
-            }
-//            details.bitwidth = total_bits;
-        }
-        if let Some(SymbolKind::Struct(details)) = self.symbols.get_mut(&ident) {
-            details.bitwidth = total_bits;
-            Ok(())
-        } else {
-            Err(ProgramError::of("struct_decl", "Name mismatch in symbol table"))
-        }
-    }
-
-    fn global_statement(&mut self, s: &GlobalStatement) -> WidthAnalysisResult {
-        match s {
-            GlobalStatement::StructureDeclaration(s) => self.structure_declaration(s),
-            GlobalStatement::ConstantDeclaration(_c) => Ok(()),
-        }
-    }
-
-    fn global_statements(&mut self, block: &[GlobalStatement]) -> WidthAnalysisResult {
-        for x in block {
-            self.global_statement(x)?;
-        }
-        Ok(())
-    }
-
-    fn global(&mut self, g: &GlobalBlock) -> WidthAnalysisResult {
-        self.symbols.prefix = g.name.text(self.input);
-        self.global_statements(&g.statements)?;
-        self.symbols.prefix = String::new();
-        Ok(())
-    }
-
-    fn port_declaration(&mut self, p: &PortDeclaration) -> WidthAnalysisResult {
-        let ident = self.symbols.prefixed_name(&p.name.text(self.input));
-        let port_bits = self.get_symbol_size(&ident)?;
-        self.define_symbol_size(&p.name, port_bits);
-        println!("Defining {} -> {} bits", ident, port_bits);
-        Ok(())
-    }
-
-    fn port_declarations(&mut self, ports: &[PortDeclaration]) -> WidthAnalysisResult {
-        for x in ports {
-            self.port_declaration(x)?;
-        }
-        Ok(())
-    }
-
-    fn module(&mut self, m: &ModuleBlock) -> WidthAnalysisResult {
-        self.symbols.prefix = m.name.text(self.input);
-        self.port_declarations(&m.ports)?;
-        //self.parameter_declarations(&m.params)?;
-        //self.body(&m.body);
-        self.symbols.prefix = String::new();
-        Ok(())
-    }
-
-    fn source_block(&mut self, b: &SourceBlock) -> WidthAnalysisResult {
-        match b {
-            SourceBlock::GlobalBlock(g) => self.global(g),
-            SourceBlock::ModuleBlock(m) => self.module(m),
-            _ => Ok(()),
-        }
-    }
-
-    pub fn source(&mut self, blk: &[SourceBlock]) -> WidthAnalysisResult {
-        for x in blk {
-            self.source_block(x)?;
-        }
-        Ok(())
-    }
+    ret
 }

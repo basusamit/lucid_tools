@@ -65,7 +65,7 @@ global baz{
     
     const unused_8 = $assert_eq(10h145>>3,10h28);
     
-    struct Energy{
+    struct EnergyGlobal{
         red [8];
         green [2];
     blue }
@@ -115,5 +115,5 @@ module foobar
         
         dff <Complex>meat;
         
-        sig <Complex>meat2[color_count];
+        sig <Complex>meat2[color_count][green_bits];
     }

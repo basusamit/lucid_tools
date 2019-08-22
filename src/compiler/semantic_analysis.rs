@@ -44,6 +44,8 @@ pub struct Shape {
     pub kind: Option<String>, // The kind is none for bits
     pub dimensions: Vec<usize>, // The size of the array
     pub bitwidth: usize, // The number of bits in this object
+    pub bitoffset: usize, // The bitoffset of this object
+    pub elementsize: usize, // The size of each object in the array in bits
 }
 
 impl Shape {
@@ -52,6 +54,8 @@ impl Shape {
             kind: None,
             dimensions: vec![],
             bitwidth: 0,
+            bitoffset: 0,
+            elementsize: 0,
         }
     }
 
@@ -60,6 +64,8 @@ impl Shape {
             kind,
             dimensions: vec![],
             bitwidth: 0,
+            bitoffset: 0,
+            elementsize: 0,
         }
     }
 }
@@ -210,11 +216,11 @@ impl<'a> SemanticAnalysisContext<'a> {
         // TODO - validate this type
         match s {
             Some(s) => Ok(Some(
-                s.names
+                self.symbols.prefixed_name(&s.names
                     .iter()
                     .map(|x| x.text(self.input))
                     .collect::<Vec<String>>()
-                    .join("."))),
+                    .join(".")))),
             None => Ok(None),
         }
     }
@@ -222,11 +228,7 @@ impl<'a> SemanticAnalysisContext<'a> {
     fn signal_declaration(&mut self, s: &SignalDeclaration) -> SemanticAnalysisResult {
         let struct_kind = self.map_struct_type(&s.kind)?;
         for x in &s.vars {
-            self.define_symbol(&x.name, &SymbolKind::Signal(Shape {
-                kind: struct_kind.clone(),
-                dimensions: vec![],
-                bitwidth: 0,
-            }))?;
+            self.define_symbol(&x.name, &SymbolKind::Signal(Shape::from_kind(struct_kind.clone())))?;
         }
         Ok(())
     }
@@ -241,12 +243,7 @@ impl<'a> SemanticAnalysisContext<'a> {
         let struct_kind = self.map_struct_type(&d.kind)?;
         for x in &d.dffs {
             self.define_symbol(&x.name, &SymbolKind::DFF(
-                Shape {
-                    kind: struct_kind.clone(),
-                    dimensions: vec![],
-                    bitwidth: 0,
-                }
-            ))?
+                Shape::from_kind(struct_kind.clone())))?
         }
         Ok(())
     }
