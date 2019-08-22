@@ -78,3 +78,23 @@ BASE_ADDR = 32hfffffff0
 
    sig<Complex> meat2[color_count][green_bits];
 }
+
+module bazm
+#(
+WIDTH = 1 : WIDTH > 0
+)
+(input clk, input in[WIDTH], output out[WIDTH]) {
+  dff g[WIDTH];
+  
+}
+
+module cloger
+#(
+COUNTER = 100: COUNTER > 0
+)
+(input clk, output pulse) {
+  const reg_width = $clog2(COUNTER);
+  const max_val = $pow(2,reg_width);
+
+  dff count[reg_width];
+}

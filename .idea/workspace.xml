@@ -13,10 +13,8 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="50e2356b-c2d2-467c-96f4-2ccdb61925ff" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/jnk.luc" beforeDir="false" afterPath="$PROJECT_DIR$/jnk.luc" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/compiler/semantic_analysis.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/compiler/semantic_analysis.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/compiler/width_analysis.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/compiler/width_analysis.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/compiler/constant_expressions.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/compiler/constant_expressions.rs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/main.rs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/test/t.luc" beforeDir="false" afterPath="$PROJECT_DIR$/test/t.luc" afterDir="false" />
     </list>
@@ -32,10 +30,28 @@
   <component name="FileEditorManager">
     <leaf>
       <file pinned="false" current-in-tab="true">
+        <entry file="file://$PROJECT_DIR$/src/compiler/constant_expressions.rs">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="192">
+              <caret line="444" column="2" selection-start-line="444" selection-start-column="2" selection-end-line="444" selection-end-column="2" />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/src/compiler/cvalue.rs">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="1561">
+              <caret line="401" column="25" lean-forward="true" selection-start-line="401" selection-start-column="25" selection-end-line="401" selection-end-column="25" />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/compiler/width_analysis.rs">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="45">
-              <caret line="42" lean-forward="true" selection-start-line="42" selection-end-line="42" />
+            <state relative-caret-position="538">
+              <caret line="102" lean-forward="true" selection-start-line="102" selection-end-line="102" />
             </state>
           </provider>
         </entry>
@@ -43,8 +59,8 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/compiler/semantic_analysis.rs">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="262">
-              <caret line="68" column="9" lean-forward="true" selection-start-line="68" selection-start-column="9" selection-end-line="68" selection-end-column="9" />
+            <state relative-caret-position="106">
+              <caret line="148" column="56" selection-start-line="148" selection-start-column="45" selection-end-line="148" selection-end-column="56" />
               <folding>
                 <element signature="e#3165#3166#0" expanded="true" />
                 <element signature="e#3210#3211#0" expanded="true" />
@@ -60,8 +76,8 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/main.rs">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="427">
-              <caret line="73" column="8" lean-forward="true" selection-start-line="73" selection-start-column="8" selection-end-line="73" selection-end-column="8" />
+            <state relative-caret-position="248">
+              <caret line="53" column="54" lean-forward="true" selection-start-line="53" selection-start-column="54" selection-end-line="53" selection-end-column="54" />
             </state>
           </provider>
         </entry>
@@ -69,8 +85,8 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/compiler/ast.rs">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="240">
-              <caret line="206" column="36" lean-forward="true" selection-start-line="206" selection-start-column="36" selection-end-line="206" selection-end-column="36" />
+            <state relative-caret-position="300">
+              <caret line="210" lean-forward="true" selection-start-line="210" selection-end-line="210" />
             </state>
           </provider>
         </entry>
@@ -83,8 +99,8 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/compiler/size_analysis.rs">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="149">
-              <caret line="113" column="31" selection-start-line="113" selection-start-column="31" selection-end-line="113" selection-end-column="31" />
+            <state relative-caret-position="106">
+              <caret line="31" column="40" selection-start-line="31" selection-start-column="40" selection-end-line="31" selection-end-column="40" />
             </state>
           </provider>
         </entry>
@@ -109,8 +125,16 @@
       <find>Symbol</find>
       <find>compute_si</find>
       <find>get_sized_</find>
-      <find>shape {</find>
       <find>shape</find>
+      <find>Sizing symbol</find>
+      <find>No signal</find>
+      <find>symbol used before</find>
+      <find>Unknown fun</find>
+      <find>signal_base</find>
+      <find>shape {</find>
+      <find>flatten</find>
+      <find>ProgramErro</find>
+      <find>ProgramError::</find>
     </findStrings>
   </component>
   <component name="Git.Settings">
@@ -120,9 +144,10 @@
   <component name="IdeDocumentHistory">
     <option name="CHANGED_PATHS">
       <list>
-        <option value="$PROJECT_DIR$/src/main.rs" />
         <option value="$PROJECT_DIR$/src/compiler/semantic_analysis.rs" />
         <option value="$PROJECT_DIR$/src/compiler/width_analysis.rs" />
+        <option value="$PROJECT_DIR$/src/main.rs" />
+        <option value="$PROJECT_DIR$/src/compiler/constant_expressions.rs" />
       </list>
     </option>
   </component>
@@ -281,7 +306,7 @@
       <workItem from="1564949500981" duration="13000" />
       <workItem from="1566414646747" duration="3713000" />
       <workItem from="1566426655381" duration="2236000" />
-      <workItem from="1566438067830" duration="7932000" />
+      <workItem from="1566438067830" duration="10772000" />
     </task>
     <task id="LOCAL-00001" summary="Added licenses to files.">
       <created>1552676561087</created>
@@ -306,7 +331,7 @@
     </history-entry>
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="7932000" />
+    <option name="totallyTimeSpent" value="10772000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="0" y="0" width="1920" height="1080" extended-state="0" />
@@ -318,12 +343,12 @@
       <window_info anchor="bottom" id="Tool Output" />
       <window_info anchor="bottom" id="Database Changes" />
       <window_info anchor="bottom" id="Version Control" />
-      <window_info anchor="bottom" id="Terminal" weight="0.35346535" />
+      <window_info active="true" anchor="bottom" id="Terminal" visible="true" weight="0.34653464" />
       <window_info anchor="bottom" id="Event Log" side_tool="true" />
       <window_info anchor="bottom" id="ANTLR Preview" />
       <window_info anchor="bottom" id="Message" order="0" />
       <window_info anchor="bottom" id="Find" order="1" weight="0.32970297" />
-      <window_info active="true" anchor="bottom" id="Run" order="2" visible="true" weight="0.5524753" />
+      <window_info anchor="bottom" id="Run" order="2" weight="0.5524753" />
       <window_info anchor="bottom" id="Debug" order="3" weight="0.4" />
       <window_info anchor="bottom" id="Cvs" order="4" weight="0.25" />
       <window_info anchor="bottom" id="Inspection" order="5" weight="0.4" />
@@ -377,10 +402,24 @@
     <option name="LAST_COMMIT_MESSAGE" value="Built basic constant expression evaluator.  Added assert function to validate results against alchitry labs IDE." />
   </component>
   <component name="editorHistoryManager">
+    <entry file="file://$PROJECT_DIR$/src/compiler/cvalue.rs">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="1561">
+          <caret line="401" column="25" lean-forward="true" selection-start-line="401" selection-start-column="25" selection-end-line="401" selection-end-column="25" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/compiler/width_analysis.rs">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="538">
+          <caret line="102" lean-forward="true" selection-start-line="102" selection-end-line="102" />
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/src/compiler/semantic_analysis.rs">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="262">
-          <caret line="68" column="9" lean-forward="true" selection-start-line="68" selection-start-column="9" selection-end-line="68" selection-end-column="9" />
+        <state relative-caret-position="106">
+          <caret line="148" column="56" selection-start-line="148" selection-start-column="45" selection-end-line="148" selection-end-column="56" />
           <folding>
             <element signature="e#3165#3166#0" expanded="true" />
             <element signature="e#3210#3211#0" expanded="true" />
@@ -394,15 +433,15 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/main.rs">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="427">
-          <caret line="73" column="8" lean-forward="true" selection-start-line="73" selection-start-column="8" selection-end-line="73" selection-end-column="8" />
+        <state relative-caret-position="248">
+          <caret line="53" column="54" lean-forward="true" selection-start-line="53" selection-start-column="54" selection-end-line="53" selection-end-column="54" />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/src/compiler/ast.rs">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="240">
-          <caret line="206" column="36" lean-forward="true" selection-start-line="206" selection-start-column="36" selection-end-line="206" selection-end-column="36" />
+        <state relative-caret-position="300">
+          <caret line="210" lean-forward="true" selection-start-line="210" selection-end-line="210" />
         </state>
       </provider>
     </entry>
@@ -411,15 +450,15 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/compiler/size_analysis.rs">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="149">
-          <caret line="113" column="31" selection-start-line="113" selection-start-column="31" selection-end-line="113" selection-end-column="31" />
+        <state relative-caret-position="106">
+          <caret line="31" column="40" selection-start-line="31" selection-start-column="40" selection-end-line="31" selection-end-column="40" />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/compiler/width_analysis.rs">
+    <entry file="file://$PROJECT_DIR$/src/compiler/constant_expressions.rs">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="45">
-          <caret line="42" lean-forward="true" selection-start-line="42" selection-end-line="42" />
+        <state relative-caret-position="192">
+          <caret line="444" column="2" selection-start-line="444" selection-start-column="2" selection-end-line="444" selection-end-column="2" />
         </state>
       </provider>
     </entry>

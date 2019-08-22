@@ -68,14 +68,8 @@ fn main() {
     for (sym,val) in &symbol.symbols {
         println!("{} {:?}", sym, val);
     }
-/*    {
-        let mut width_analysis = WidthAnalysisContext::from(&contents, &mut symbol);
-        width_analysis.source(&source).unwrap();
-    } */
     let symbols_with_widths = compute_bitwidths(&symbol);
-    let symbols_with_widths_pass2 = compute_bitwidths(&symbols_with_widths);
     for (sym,val) in &symbols_with_widths.symbols {
         println!("{} {:?}", sym, val);
     }
-//    println!("{:?}", symbol);
 }

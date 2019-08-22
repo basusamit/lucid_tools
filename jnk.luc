@@ -1,119 +1,67 @@
-global baz{
-    const y = (3*(6123+412)-71)/2<5;
-    
-    const Qz = 5;
-    
-    const x = Qz+5;
-    
-    const Qh = {{5,5},{4,6},{4,7}};
-    
-    const gb = 3 x{ 5 };
-    
-    const gt = 2 x{ {{4},{4},{5}} };
-    
-    const gs = {4,4,5};
-    
-    const j = $flatten(gs);
-    
-    const k = $flatten(gt);
-    
-    const k_3 = $assert_eq($flatten({4,4,5}),9h125);
-    
-    const k_2 = $assert_eq($flatten({{4},{4},{5}}),9h125);
-    
-    const k_1 = $assert_eq(k,18h24b25);
-    
-    const k_4 = $assert_eq($flatten(c{ gs,gs }),18h24b25);
-    
-    const k1 = 10h145;
-    
-    const k2 = 10b110010zzx;
-    
-    const k4 = 10d137;
-    
-    const z = {k4,k4};
-    
-    const k7 = z[0];
-    
-    const k8 = z[0][0];
-    
-    const unused_0 = $assert_eq(k8,1);
-    
-    const unused = $assert_eq($flatten(5),5);
-    
-    const unused_1 = $assert_eq((3>1) ? 5 : 7,5);
-    
-    const gk = {8ha,8h0,8hd};
-    
-    const gl = k1[0:3];
-    
-    const unused_2 = $assert_eq(gl,4h5);
-    
-    const gl1 = k1[0+:3];
-    
-    const unused_3 = $assert_eq(gl1,3h5);
-    
-    const gl2 = k1[3-:3];
-    
-    const unused_4 = $assert_eq(gl2,3h2);
-    
-    const unused_5 = $assert_eq(10h145<<1,11h28a);
-    
-    const unused_6 = $assert_eq(10h145>>1,10h0a2);
-    
-    const unused_7 = $assert_eq(10h145<<3,13ha28);
-    
-    const unused_8 = $assert_eq(10h145>>3,10h28);
-    
-    struct EnergyGlobal{
-        red [8];
-        green [2];
-    blue }
-    
-    struct outstuff{
-    color [Qz]}
-}
-
-module foobar
+module async_fifo
     #(
-        DATA_WIDTH = 8,
-        BASE_ADDR = 32hfffffff0
+        SIZE = 4 : SIZE>0,
+        DEPTH = 8 : DEPTH==$pow(2,$clog2(DEPTH))
     )
     (
-        input clk,
-        input rst[4],
-        input<baz.outstuff> timing,
-        output<baz.outstuff> adjusted[baz.Qz]
+        input wclk,
+        input wrst,
+        input din[SIZE],
+        input wput,
+        output full,
+        input rclk,
+        input rrst,
+        output dout[SIZE],
+        input rget,
+        output empty
     )
     {
-        const x = 32;
+        const ADDR_SIZE = $clog2(DEPTH);
         
-        const y = x+64;
+        .clk(wclk), .rst(wrst) {
+            dff waddr[ADDR_SIZE];
+            dff wsync[2][ADDR_SIZE];
+        }
         
-        dff blah[3][2][4];
+        .clk(rclk), .rst(rrst) {
+            dff raddr[ADDR_SIZE];
+            dff rsync[2][ADDR_SIZE];
+        }
         
-        dff bazo[y][x];
+        simple_dual_ram ram(#SIZE(SIZE), #DEPTH(DEPTH));
         
-        const red_bits = 8;
+        sig waddr_gray[ADDR_SIZE];
         
-        const green_bits = 2;
+        sig wnext_gray[ADDR_SIZE];
         
-        const blue_bits = 3;
+        sig raddr_gray[ADDR_SIZE];
         
-        const color_count = 6;
+        sig wrdy,rrdy;
         
-        struct Energy{
-            red [red_bits];
-            green [green_bits];
-        blue [blue_bits]}
-        
-        dff <Energy>energy;
-        
-        struct Complex{
-            color <Energy>[color_count][color_count*2];
-        depth <Energy>}
-        
-        dff <Complex>meat;
-        
-        sig <Complex>meat2[color_count][green_bits];
+        always {
+            ram.wclk = wclk;
+            ram.rclk = rclk;
+            ram.write_en = 0;
+            waddr_gray = (waddr.q>>1)^waddr.q;
+            wnext_gray = ((waddr.q+1)>>1)^(waddr.q+1);
+            raddr_gray = (raddr.q>>1)^raddr.q;
+            rsync.d = {rsync.q[0],waddr_gray};
+            wsync.d = {wsync.q[0],raddr_gray};
+            wrdy = wnext_gray!=wsync.q[1];
+            rrdy = raddr_gray!=rsync.q[1];
+            full = !wrdy;
+            empty = !rrdy;
+            ram.waddr = waddr.q;
+            ram.raddr = raddr.q;
+            ram.write_data = din;
+            if (wput&&wrdy) {
+                waddr.d = waddr.q+1;
+                ram.write_en = 1;
+            }
+            if (rget&&rrdy) {
+                raddr.d = raddr.q+1;
+                ram.raddr = raddr.q+1;
+            }
+            dout = ram.read_data;
+        }
     }

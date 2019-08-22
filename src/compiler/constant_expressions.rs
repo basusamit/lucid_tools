@@ -341,7 +341,7 @@ impl<'a> ConstantExpressionContext<'a> {
         if let Some(SymbolKind::Constant(val)) = self.symbols.get(&prefixed_name) {
             return Ok(val.clone());
         } else {
-            return Err(ProgramError::of("No signal found", &prefixed_name));
+            return Ok(ConstantValue::empty());
         }
     }
 
@@ -434,6 +434,35 @@ impl<'a> ConstantExpressionContext<'a> {
         Ok(ConstantValue::flatten(&arg))
     }
 
+    fn clog2(&self, arguments: &[Box<Expression>]) -> ConstantExpressionResult {
+        if arguments.len() != 1 {
+            return Err(ProgramError::of("Too many arguments to clog2", "clog2 only takes one argument"));
+        }
+        let arg = self.constant_expression(&arguments[0])?;
+        if !arg.is_number() {
+            return Err(ProgramError::of("Invalid argument to clog2", "clog2 only takes numeric arguments"));
+        }
+        let val = arg.as_int();
+//        let val_as_int = val.to_i64().unwrap() as f64;
+//        let clog = val_as_int.log2().ceil() as i64;
+        Ok(ConstantValue::from_bigint(&BigInt::from(val.bits())))
+    }
+
+    fn pow(&self, arguments: &[Box<Expression>]) -> ConstantExpressionResult {
+        if arguments.len() != 2 {
+            return Err(ProgramError::of("pow requires 2 arguments", "pow requries 2 arguments"));
+        }
+        let base = self.constant_expression(&arguments[0])?;
+        let exponent = self.constant_expression(&arguments[1])?;
+        if !base.is_number() || !exponent.is_number() {
+            return Err(ProgramError::of("pow invalid", "both arguments to pow must be valid"));
+        }
+        let base_int = base.as_int().to_i32().unwrap();
+        let exponent_int = exponent.as_int().to_i32().unwrap();
+        let new_val = ((base_int as f64).powi(exponent_int)) as i32;
+        Ok(ConstantValue::from_bigint(&BigInt::from(new_val)))
+    }
+
     fn assert_eq(&self, arguments: &[Box<Expression>]) -> ConstantExpressionResult {
         if arguments.len() != 2 {
             return Err(ProgramError::of("Two arguments to assert_eq","wrong number of arguments"));
@@ -452,7 +481,9 @@ impl<'a> ConstantExpressionContext<'a> {
         match name_string.as_str() {
             "$flatten" => self.flatten(arguments),
             "$assert_eq" => self.assert_eq(arguments),
-            _ => Err(ProgramError::of("unknown function","Unknown function")),
+            "$clog2" => self.clog2(arguments),
+            "$pow" => self.pow(arguments),
+            _ => Err(ProgramError::of("unknown function",&(format!("Unknown function {}", name_string))))
         }
     }
 
