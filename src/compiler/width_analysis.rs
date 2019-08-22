@@ -128,10 +128,34 @@ impl<'a> WidthAnalysisContext<'a> {
         Ok(())
     }
 
+    fn port_declaration(&mut self, p: &PortDeclaration) -> WidthAnalysisResult {
+        let ident = self.symbols.prefixed_name(&p.name.text(self.input));
+        let port_bits = self.get_symbol_size(&ident)?;
+        self.define_symbol_size(&p.name, port_bits);
+        println!("Defining {} -> {} bits", ident, port_bits);
+        Ok(())
+    }
+
+    fn port_declarations(&mut self, ports: &[PortDeclaration]) -> WidthAnalysisResult {
+        for x in ports {
+            self.port_declaration(x)?;
+        }
+        Ok(())
+    }
+
+    fn module(&mut self, m: &ModuleBlock) -> WidthAnalysisResult {
+        self.symbols.prefix = m.name.text(self.input);
+        self.port_declarations(&m.ports)?;
+        //self.parameter_declarations(&m.params)?;
+        //self.body(&m.body);
+        self.symbols.prefix = String::new();
+        Ok(())
+    }
+
     fn source_block(&mut self, b: &SourceBlock) -> WidthAnalysisResult {
         match b {
             SourceBlock::GlobalBlock(g) => self.global(g),
-            //SourceBlock::ModuleBlock(m) => self.module(m),
+            SourceBlock::ModuleBlock(m) => self.module(m),
             _ => Ok(()),
         }
     }

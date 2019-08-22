@@ -1,117 +1,46 @@
-module wave_capture
+module bin_to_dec
     #(
-        DATA_WIDTH = 8 : DATA_WIDTH>0,
-        CAPTURE_DEPTH = 256 : CAPTURE_DEPTH>0,
-        BASE_ADDR = 32hfffffff0 : BASE_ADDR<=32hfffffff0,
-        NONCE = 0 : NONCE.WIDTH<=32
+        DIGITS = 1 : DIGITS>0,
+        LEADING_ZEROS = 0 : LEADING_ZEROS==0||LEADING_ZEROS==1
     )
     (
-        input clk,
-        input rst,
-        input<Register.master> regIn,
-        output<Register.slave> regOut,
-        input data[DATA_WIDTH]
+        input value[$clog2($pow(10,DIGITS))],
+        output digits[DIGITS][4]
     )
     {
-        const VERSION = 32d2;
+        var i,j,scale;
         
-        const SUB_SECTIONS = $cdiv(DATA_WIDTH,32);
+        sig remainder[value.WIDTH];
         
-        .clk(clk) {
-            .rst(rst) {
-                fsm state = {IDLE,ARMED,FIRED,CAPTURED};
-            }
-            dff raddr[$clog2(CAPTURE_DEPTH)];
-            dff waddr[$clog2(CAPTURE_DEPTH)];
-            dff data_old[DATA_WIDTH];
-            dff trigger_type[DATA_WIDTH][4];
-            dff trigger_index[$clog2(DATA_WIDTH)];
-            dff sub_idx[SUB_SECTIONS>1 ? $clog2(SUB_SECTIONS) : 1];
-        }
+        sig sub_value[value.WIDTH];
         
-        simple_dual_ram ram(#SIZE(DATA_WIDTH), #DEPTH(CAPTURE_DEPTH), .rclk(clk), .wclk(clk));
-        
-        var i;
-        
-        sig triggered;
+        sig blank;
         
         always {
-            ram.waddr = waddr.q;
-            ram.raddr = raddr.q;
-            ram.write_data = data;
-            ram.write_en = 0;
-            regOut.data = 32bx;
-            regOut.drdy = 0;
-            data_old.d = data;
-            case (state.q) {
-                state.ARMED: 
-                    triggered = 1;
-                    for (i = 0;i<DATA_WIDTH; i++) {
-                        triggered = triggered&((trigger_type.q[i][0]&&data_old.q[i]==0&&data[i]==1)||(trigger_type.q[i][1]&&data_old.q[i]==1&&data[i]==0)||(trigger_type.q[i][2]&&data[i]==0)||(trigger_type.q[i][3]&&data[i]==1)||trigger_type.q[i]==4b0);
-                    }
-                    if (triggered) {
-                        ram.write_en = 1;
-                        state.d = state.FIRED;
-                        waddr.d = waddr.q+1;
-                    }
-                state.FIRED: 
-                    waddr.d = waddr.q+1;
-                    ram.write_en = 1;
-                    if (waddr.q==CAPTURE_DEPTH-1) {
-                        state.d = state.CAPTURED;
-                    }
+            for (i = 0;i<DIGITS; i++) {
+                digits[i] = d11;
             }
-            if (regIn.new_cmd) {
-                if (regIn.write) {
-                    case (regIn.address) {
-                        BASE_ADDR: 
-                            if (regIn.data==32h1) {
-                                state.d = state.ARMED;
-                                waddr.d = 0;
-                                raddr.d = 0;
-                            } else {
-                                if (regIn.data==32h2) {
-                                    state.d = state.FIRED;
-                                    waddr.d = 0;
-                                    raddr.d = 0;
-                                }
+            remainder = value;
+            blank = !LEADING_ZEROS;
+            if (value<$pow(10,DIGITS)) {
+                for (j = DIGITS-1;j>=$signed(0); j--) {
+                    scale = $pow(10,j);
+                    if (remainder<scale) {
+                        if (j!=0&&blank) {
+                            digits[j] = 10;
+                        } else {
+                            digits[j] = 0;
+                        }
+                    } else {
+                        blank = 0;
+                        sub_value = 0;
+                        for (i = 9;i>=1; i--) {
+                            if (remainder<(i+1)*scale) {
+                                digits[j] = i;
+                                sub_value = i*scale;
                             }
-                        BASE_ADDR+4: 
-                            trigger_index.d = regIn.data[0+:trigger_index.WIDTH];
-                        BASE_ADDR+5: 
-                            trigger_type.d[trigger_index.q] = regIn.data[3:0];
-                    }
-                } else {
-                    regOut.drdy = 1;
-                    case (regIn.address) {
-                        BASE_ADDR: 
-                            regOut.data = c{ raddr.q==CAPTURE_DEPTH,state.q==state.CAPTURED,state.q==state.FIRED,state.q==state.ARMED };
-                        BASE_ADDR+1: 
-                            if (SUB_SECTIONS>1) {
-                                regOut.data = ram.read_data[sub_idx.q*32+:32];
-                                sub_idx.d = sub_idx.q+1;
-                                if (sub_idx.q==SUB_SECTIONS-1) {
-                                    sub_idx.d = 0;
-                                    raddr.d = raddr.q+1;
-                                }
-                            } else {
-                                regOut.data = ram.read_data;
-                                raddr.d = raddr.q+1;
-                            }
-                        BASE_ADDR+2: 
-                            regOut.data = DATA_WIDTH;
-                        BASE_ADDR+3: 
-                            regOut.data = CAPTURE_DEPTH;
-                        BASE_ADDR+4: 
-                            regOut.data = trigger_index.q;
-                        BASE_ADDR+5: 
-                            regOut.data = trigger_type.q[trigger_index.q];
-                        BASE_ADDR+14: 
-                            regOut.data = NONCE;
-                        BASE_ADDR+15: 
-                            regOut.data = VERSION;
-                        default: 
-                            regOut.drdy = 0;
+                        }
+                        remainder = remainder-sub_value;
                     }
                 }
             }
